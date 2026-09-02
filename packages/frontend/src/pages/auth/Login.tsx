@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
+import { Button } from '../../components/ui/Button';
+import { Sparkles } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -21,56 +23,62 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background-muted flex items-center justify-center px-4">
-      <div className="bg-background-light p-8 rounded-xl border border-border shadow-sm max-w-md w-full">
+    <div className="min-h-screen bg-[#0D0F0F] flex items-center justify-center px-4">
+      <div className="bg-[#161A19] p-8 rounded-xl border border-[#2A302E] shadow-lg max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-text-heading">Welcome Back</h1>
-          <p className="text-text-body mt-1">Sign in to continue your learning journey</p>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="text-2xl font-bold text-[#10B981]">Nex</span>
+            <span className="text-2xl font-bold text-[#EDEFEE]">Lab</span>
+            <Sparkles className="w-4 h-4 text-[#10B981]" />
+          </div>
+          <h1 className="text-2xl font-bold text-[#EDEFEE]">Welcome Back</h1>
+          <p className="text-[#9CA3A0] mt-1">Sign in to continue your learning journey</p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+          <div className="mb-4 p-3 bg-[#F87171]/10 border border-[#F87171]/20 rounded-lg text-[#F87171] text-sm">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-text-body mb-1">Email</label>
+            <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
               placeholder="you@example.com"
               required
             />
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-medium text-text-body mb-1">Password</label>
+            <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
               placeholder="••••••••"
               required
             />
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
             disabled={isLoading}
-            className="w-full py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
+            className="w-full"
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
-          </button>
+          </Button>
         </form>
 
-        <p className="text-center text-sm text-text-body mt-6">
+        <p className="text-center text-sm text-[#9CA3A0] mt-6">
           Don't have an account?{' '}
-          <Link to="/register" className="text-primary-600 hover:underline font-medium">
+          <Link to="/register" className="text-[#10B981] hover:text-[#34D399] font-medium transition-colors">
             Register
           </Link>
         </p>

@@ -3,14 +3,12 @@ import { Play, Loader2, Terminal, ChevronDown, X, Copy, Check } from 'lucide-rea
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 
-// Monaco Editor is heavy - we'll dynamically import it
 const MonacoEditor = React.lazy(() => import('@monaco-editor/react'));
 
 interface Language {
   id: string;
   name: string;
   extension: string;
-  defaultVersion: string;
   sample: string;
 }
 
@@ -21,10 +19,8 @@ interface ExecutionResult {
   executed: boolean;
   exitCode?: number;
   language?: string;
-  version?: string;
   executionTime?: string;
-  isCompileError?: boolean;
-  message?: string; // Added for error messages
+  message?: string;
 }
 
 export const Sandbox: React.FC = () => {
@@ -44,7 +40,6 @@ export const Sandbox: React.FC = () => {
     fetchLanguages();
   }, []);
 
-  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -91,35 +86,27 @@ export const Sandbox: React.FC = () => {
     setResult(null);
 
     try {
-      console.log('🚀 Sending code execution request...');
-      console.log('📝 Code:', code);
-      console.log('🔤 Language:', selectedLanguage);
-      console.log('📥 Stdin:', stdin);
-
       const response = await api.post('/sandbox/execute', {
         language: selectedLanguage,
         code: code,
         stdin: stdin,
       });
 
-      console.log('✅ Execution response:', response.data);
       setResult(response.data);
-
-      // Scroll to output
+      
       if (outputRef.current) {
         setTimeout(() => {
           outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
       }
     } catch (error: any) {
-      console.error('❌ Execution error:', error);
-      // Don't log out on error - just show the error message
+      console.error('Execution error:', error);
       setResult({
         success: false,
         output: '',
-        error: error.response?.data?.message || error.message || 'Failed to execute code.',
+        error: error.response?.data?.message || 'Failed to execute code.',
         executed: false,
-        message: error.response?.data?.message || error.message || 'Failed to execute code.',
+        message: error.response?.data?.message || 'Failed to execute code.',
       });
     } finally {
       setIsExecuting(false);
@@ -139,26 +126,18 @@ export const Sandbox: React.FC = () => {
 
   const getLanguageColor = (languageId: string) => {
     const colors: Record<string, string> = {
-      python: 'bg-blue-500',
-      javascript: 'bg-yellow-500',
-      typescript: 'bg-blue-600',
-      java: 'bg-red-500',
-      cpp: 'bg-purple-500',
-      c: 'bg-gray-500',
-      go: 'bg-cyan-500',
-      rust: 'bg-orange-500',
-      ruby: 'bg-red-600',
-      php: 'bg-indigo-500',
-      swift: 'bg-orange-600',
-      kotlin: 'bg-purple-600',
+      python: 'bg-[#10B981]',
+      javascript: 'bg-[#60A5FA]',
+      java: 'bg-[#FBBF24]',
+      cpp: 'bg-[#F87171]',
     };
-    return colors[languageId] || 'bg-gray-500';
+    return colors[languageId] || 'bg-[#10B981]';
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent" />
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#10B981] border-t-transparent" />
       </div>
     );
   }
@@ -167,32 +146,31 @@ export const Sandbox: React.FC = () => {
 
   return (
     <div className="py-8 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-text-heading">Code Sandbox</h1>
-          <p className="text-text-body mt-1">Write, test, and run code in multiple languages</p>
+          <h1 className="text-2xl font-bold text-[#EDEFEE]">Code Sandbox</h1>
+          <p className="text-[#9CA3A0] mt-1">Write, test, and run code in Python, JavaScript, Java, and C++</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Language Selector */}
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-              className="flex items-center gap-2 px-4 py-2 bg-background-light border border-border rounded-lg hover:border-primary-300 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg hover:border-[#10B981]/30 transition-colors"
             >
               <span className={`w-2 h-2 rounded-full ${getLanguageColor(selectedLanguage)}`} />
-              <span className="font-medium">{currentLanguage?.name || 'Select Language'}</span>
-              <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
+              <span className="font-medium text-[#EDEFEE]">{currentLanguage?.name || 'Select Language'}</span>
+              <ChevronDown className={`w-4 h-4 text-[#9CA3A0] transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isLanguageDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-background-light border border-border rounded-lg shadow-lg py-1 z-10 max-h-60 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 w-48 bg-[#161A19] border border-[#2A302E] rounded-lg shadow-lg py-1 z-10">
                 {languages.map((lang) => (
                   <button
                     key={lang.id}
                     onClick={() => handleLanguageChange(lang.id)}
-                    className={`w-full text-left px-4 py-2 hover:bg-background-muted transition-colors flex items-center gap-2 ${selectedLanguage === lang.id ? 'bg-primary-50 text-primary-600' : ''
-                      }`}
+                    className={`w-full text-left px-4 py-2.5 hover:bg-[#1E2322] transition-colors flex items-center gap-2 ${
+                      selectedLanguage === lang.id ? 'bg-[#10B981]/10 text-[#10B981]' : 'text-[#9CA3A0]'
+                    }`}
                   >
                     <span className={`w-2 h-2 rounded-full ${getLanguageColor(lang.id)}`} />
                     <span>{lang.name}</span>
@@ -202,7 +180,6 @@ export const Sandbox: React.FC = () => {
             )}
           </div>
 
-          {/* Run Button */}
           <Button
             variant="primary"
             onClick={handleExecute}
@@ -225,17 +202,16 @@ export const Sandbox: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Editor Section */}
-        <div className="bg-background-light border border-border rounded-xl overflow-hidden shadow-sm">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
+          <div className="px-4 py-3 border-b border-[#2A302E] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${getLanguageColor(selectedLanguage)}`} />
-              <span className="text-sm font-medium text-text-heading">
+              <span className="text-sm font-medium text-[#EDEFEE]">
                 {currentLanguage?.name || 'Code Editor'}
               </span>
-              <span className="text-xs text-text-muted">.{(currentLanguage?.extension || 'txt')}</span>
+              <span className="text-xs text-[#5C6360]">.{(currentLanguage?.extension || 'txt')}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-text-muted">
+            <div className="flex items-center gap-2 text-xs text-[#5C6360]">
               <span>⌘ + Enter to run</span>
             </div>
           </div>
@@ -244,7 +220,7 @@ export const Sandbox: React.FC = () => {
             <React.Suspense
               fallback={
                 <div className="flex items-center justify-center h-full">
-                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent" />
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-[#10B981] border-t-transparent" />
                 </div>
               }
             >
@@ -252,7 +228,7 @@ export const Sandbox: React.FC = () => {
                 language={selectedLanguage}
                 value={code}
                 onChange={(value) => setCode(value || '')}
-                theme="vs-light"
+                theme="vs-dark"
                 options={{
                   minimap: { enabled: false },
                   fontSize: 14,
@@ -269,30 +245,30 @@ export const Sandbox: React.FC = () => {
           </div>
         </div>
 
-        {/* Output Section */}
         <div className="flex flex-col gap-4">
-          {/* Input */}
-          <div className="bg-background-light border border-border rounded-xl overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-border">
-              <span className="text-sm font-medium text-text-heading">Standard Input (stdin)</span>
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-[#2A302E]">
+              <span className="text-sm font-medium text-[#EDEFEE]">Standard Input (stdin)</span>
             </div>
             <textarea
               value={stdin}
               onChange={(e) => setStdin(e.target.value)}
               placeholder="Enter input for your program..."
-              className="w-full px-4 py-3 bg-background-light text-text-body text-sm font-mono focus:outline-none resize-none h-20"
+              className="w-full px-4 py-3 bg-[#161A19] text-[#EDEFEE] text-sm font-mono focus:outline-none resize-none h-20 placeholder-[#5C6360]"
             />
           </div>
 
-          {/* Output */}
-          <div className="bg-background-light border border-border rounded-xl overflow-hidden shadow-sm flex-1">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm flex-1">
+            <div className="px-4 py-3 border-b border-[#2A302E] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-text-muted" />
-                <span className="text-sm font-medium text-text-heading">Output</span>
+                <Terminal className="w-4 h-4 text-[#9CA3A0]" />
+                <span className="text-sm font-medium text-[#EDEFEE]">Output</span>
                 {result && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${result.success ? 'bg-success-100 text-success-700' : 'bg-red-100 text-red-700'
-                    }`}>
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
+                    result.success 
+                      ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' 
+                      : 'bg-[#F87171]/10 text-[#F87171] border-[#F87171]/20'
+                  }`}>
                     {result.success ? 'Success' : 'Error'}
                   </span>
                 )}
@@ -302,14 +278,14 @@ export const Sandbox: React.FC = () => {
                   <>
                     <button
                       onClick={handleCopyOutput}
-                      className="p-1 text-text-muted hover:text-text-heading transition-colors"
+                      className="p-1 text-[#9CA3A0] hover:text-[#EDEFEE] transition-colors"
                       title="Copy output"
                     >
-                      {copied ? <Check className="w-4 h-4 text-success-500" /> : <Copy className="w-4 h-4" />}
+                      {copied ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4" />}
                     </button>
                     <button
                       onClick={handleClearOutput}
-                      className="p-1 text-text-muted hover:text-text-heading transition-colors"
+                      className="p-1 text-[#9CA3A0] hover:text-[#EDEFEE] transition-colors"
                       title="Clear output"
                     >
                       <X className="w-4 h-4" />
@@ -319,40 +295,36 @@ export const Sandbox: React.FC = () => {
               </div>
             </div>
 
-            <div ref={outputRef} className="p-4 h-[180px] overflow-y-auto font-mono text-sm bg-background-muted">
+            <div ref={outputRef} className="p-4 h-[180px] overflow-y-auto font-mono text-sm bg-[#0D0F0F]">
               {!result && (
-                <p className="text-text-muted italic">Run your code to see output here...</p>
+                <p className="text-[#5C6360] italic">Run your code to see output here...</p>
               )}
 
               {result && (
                 <div>
-                  {/* stdout */}
                   {result.output && (
                     <div>
-                      <div className="text-xs text-text-muted mb-1">STDOUT:</div>
-                      <pre className="text-text-body whitespace-pre-wrap">{result.output}</pre>
+                      <div className="text-xs text-[#9CA3A0] mb-1">STDOUT:</div>
+                      <pre className="text-[#EDEFEE] whitespace-pre-wrap">{result.output}</pre>
                     </div>
                   )}
 
-                  {/* stderr */}
                   {result.error && (
                     <div className="mt-2">
-                      <div className="text-xs text-red-500 mb-1">STDERR:</div>
-                      <pre className="text-red-600 whitespace-pre-wrap">{result.error}</pre>
+                      <div className="text-xs text-[#F87171] mb-1">STDERR:</div>
+                      <pre className="text-[#F87171] whitespace-pre-wrap">{result.error}</pre>
                     </div>
                   )}
 
-                  {/* Error message */}
                   {!result.success && result.message && (
                     <div className="mt-2">
-                      <div className="text-xs text-red-500 mb-1">Error:</div>
-                      <pre className="text-red-600 whitespace-pre-wrap">{result.message}</pre>
+                      <div className="text-xs text-[#F87171] mb-1">Error:</div>
+                      <pre className="text-[#F87171] whitespace-pre-wrap">{result.message}</pre>
                     </div>
                   )}
 
-                  {/* Execution info */}
                   {result.executed && result.success && (
-                    <div className="mt-3 pt-3 border-t border-border flex items-center gap-4 text-xs text-text-muted">
+                    <div className="mt-3 pt-3 border-t border-[#2A302E] flex items-center gap-4 text-xs text-[#9CA3A0]">
                       {result.exitCode !== undefined && (
                         <span>Exit Code: {result.exitCode}</span>
                       )}
@@ -371,10 +343,9 @@ export const Sandbox: React.FC = () => {
         </div>
       </div>
 
-      {/* Keyboard Shortcut Hint */}
-      <div className="mt-4 text-xs text-text-muted text-center">
-        <kbd className="px-2 py-1 bg-background-muted border border-border rounded text-xs">⌘ + Enter</kbd>
-        {' '}to run code • Multiple languages supported • 10 executions per minute
+      <div className="mt-4 text-xs text-[#5C6360] text-center">
+        <kbd className="px-2.5 py-1 bg-[#161A19] border border-[#2A302E] rounded text-xs">⌘ + Enter</kbd>
+        {' '}to run code • 4 languages supported • 5 executions per minute
       </div>
     </div>
   );

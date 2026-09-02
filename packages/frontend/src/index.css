@@ -1,3 +1,275 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-[#2A302E];
+  }
+  
+  body {
+    background-color: #0D0F0F;
+    color: #9CA3A0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #EDEFEE;
+    font-weight: 700;
+  }
+
+  /* Scrollbar Styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background-color: #161A19;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: #10B981;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #34D399;
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: #10B981;
+    color: #FFFFFF;
+  }
+}
+
+@layer components {
+  /* Primary Button - Emerald */
+  .btn-primary {
+    background-color: #10B981;
+    color: #FFFFFF;
+    transition: all 200ms;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1rem;
+  }
+  .btn-primary:hover {
+    background-color: #34D399;
+  }
+  .btn-primary:active {
+    background-color: #059669;
+  }
+  .btn-primary:focus {
+    outline: none;
+    --tw-ring-color: #10B981;
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    background-color: #161A19;
+    color: #EDEFEE;
+    transition: all 200ms;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1rem;
+    border: 1px solid rgba(16,185,129,0.35);
+  }
+  .btn-secondary:hover {
+    background-color: #1E2322;
+  }
+  .btn-secondary:focus {
+    outline: none;
+    --tw-ring-color: #10B981;
+  }
+
+  /* Ghost Button */
+  .btn-ghost {
+    color: #9CA3A0;
+    transition: all 200ms;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1rem;
+  }
+  .btn-ghost:hover {
+    color: #EDEFEE;
+    background-color: #161A19;
+  }
+  .btn-ghost:focus {
+    outline: none;
+    --tw-ring-color: #10B981;
+  }
+
+  /* Outline Button */
+  .btn-outline {
+    border: 1px solid #10B981;
+    color: #10B981;
+    transition: all 200ms;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1rem;
+  }
+  .btn-outline:hover {
+    background-color: #10B981;
+    color: #FFFFFF;
+  }
+  .btn-outline:focus {
+    outline: none;
+    --tw-ring-color: #10B981;
+  }
+
+  /* Danger Button */
+  .btn-danger {
+    background-color: #F87171;
+    color: #FFFFFF;
+    transition: all 200ms;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1rem;
+  }
+  .btn-danger:hover {
+    opacity: 0.8;
+  }
+  .btn-danger:focus {
+    outline: none;
+    --tw-ring-color: #F87171;
+  }
+
+  /* Card */
+  .card {
+    background-color: #161A19;
+    border-radius: 0.75rem;
+    border: 1px solid #2A302E;
+    transition: all 300ms;
+  }
+  .card:hover {
+    box-shadow: 0 20px 25px -5px rgba(16,185,129,0.05), 0 10px 10px -5px rgba(16,185,129,0.02);
+  }
+
+  /* Card with elevated hover */
+  .card-hover {
+    background-color: #161A19;
+    border-radius: 0.75rem;
+    border: 1px solid #2A302E;
+    transition: all 300ms;
+  }
+  .card-hover:hover {
+    background-color: #1E2322;
+    border-color: rgba(16,185,129,0.35);
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  /* Badge - Emerald */
+  .badge-emerald {
+    background-color: rgba(16,185,129,0.2);
+    color: #10B981;
+  }
+
+  /* Badge - Success */
+  .badge-success {
+    background-color: rgba(16,185,129,0.2);
+    color: #10B981;
+  }
+
+  /* Badge - Error */
+  .badge-error {
+    background-color: rgba(248,113,113,0.2);
+    color: #F87171;
+  }
+
+  /* Badge - Warning */
+  .badge-warning {
+    background-color: rgba(251,191,36,0.2);
+    color: #FBBF24;
+  }
+
+  /* Badge - Info */
+  .badge-info {
+    background-color: rgba(96,165,250,0.2);
+    color: #60A5FA;
+  }
+
+  /* Input Field */
+  .input-field {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    background-color: #161A19;
+    border: 1px solid #2A302E;
+    border-radius: 0.5rem;
+    color: #EDEFEE;
+    transition: all 200ms;
+  }
+  .input-field:focus {
+    outline: none;
+    --tw-ring-color: #10B981;
+    border-color: #10B981;
+  }
+  .input-field::placeholder {
+    color: #5C6360;
+  }
+
+  /* Input Field with error */
+  .input-field-error {
+    padding: 0.625rem 1rem;
+    background-color: #161A19;
+    border: 1px solid #F87171;
+    border-radius: 0.5rem;
+    color: #EDEFEE;
+    transition: all 200ms;
+    width: 100%;
+  }
+  .input-field-error:focus {
+    outline: none;
+    --tw-ring-color: #F87171;
+    border-color: #F87171;
+  }
+  .input-field-error::placeholder {
+    color: #5C6360;
+  }
+
+  /* Glowing Effect */
+  .glow {
+    box-shadow: 0 10px 15px -3px rgba(16,185,129,0.1);
+  }
+
+  /* Glowing Effect - Strong */
+  .glow-strong {
+    box-shadow: 0 20px 25px -5px rgba(16,185,129,0.2);
+  }
+
+  /* Container */
+  .container-premium {
+    max-width: 80rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container-premium {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-premium {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  /* Section Divider */
+  .divider {
+    border-color: #2A302E;
+  }
+}

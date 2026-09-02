@@ -1,7 +1,13 @@
 import { Request, Response } from 'express';
-import axios from 'axios';
 import { z } from 'zod';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs/promises';
+import path from 'path';
+import { randomUUID } from 'crypto';
 import { redisClient } from '../../config/redis.js';
+
+const execAsync = promisify(exec);
 
 // Validation schema for code execution - ONLY 4 LANGUAGES
 const executeSchema = z.object({
@@ -12,31 +18,36 @@ const executeSchema = z.object({
   version: z.string().optional(),
 });
 
-// Language configurations for Piston API
-const LANGUAGE_CONFIG: Record<string, { 
-  pistonLanguage: string; 
-  pistonVersion: string;
+// Language configurations - ONLY 4 LANGUAGES
+const LANGUAGE_CONFIG: Record<string, {
   extension: string;
+  executeCmd: (filePath: string) => string;
+  compileCmd?: (filePath: string) => string;
 }> = {
   python: {
-    pistonLanguage: 'python',
-    pistonVersion: '3.10.0',
-    extension: 'py'
+    extension: 'py',
+    executeCmd: (filePath) => `python3 "${filePath}"`
   },
   javascript: {
-    pistonLanguage: 'javascript',
-    pistonVersion: '18.15.0',
-    extension: 'js'
+    extension: 'js',
+    executeCmd: (filePath) => `node "${filePath}"`
   },
   java: {
-    pistonLanguage: 'java',
-    pistonVersion: '17.0.1',
-    extension: 'java'
+    extension: 'java',
+    compileCmd: (filePath) => `javac "${filePath}"`,
+    executeCmd: (filePath) => {
+      const dir = path.dirname(filePath);
+      const className = path.basename(filePath, '.java');
+      return `cd "${dir}" && java "${className}"`;
+    }
   },
   cpp: {
-    pistonLanguage: 'cpp',
-    pistonVersion: '10.2.0',
-    extension: 'cpp'
+    extension: 'cpp',
+    compileCmd: (filePath) => {
+      const outputPath = filePath.replace('.cpp', '');
+      return `g++ "${filePath}" -o "${outputPath}"`;
+    },
+    executeCmd: (filePath) => `"${filePath.replace('.cpp', '')}"`
   }
 };
 
@@ -100,6 +111,8 @@ int main() {
 
 export class SandboxController {
   static async execute(req: Request, res: Response) {
+    const tempDir = path.join(process.cwd(), 'temp');
+
     try {
       console.log('🏖️ Sandbox execute called');
       console.log('👤 req.userId:', req.userId);
@@ -131,7 +144,11 @@ export class SandboxController {
         }
       }
 
-      // Get language config
+      // Create Temp Directory
+      await fs.mkdir(tempDir, { recursive: true });
+
+      // Create Temp File
+      const fileId = randomUUID();
       const config = LANGUAGE_CONFIG[language];
       if (!config) {
         return res.status(400).json({
@@ -140,89 +157,98 @@ export class SandboxController {
         });
       }
 
-      // For Java, ensure class is named "Main"
+      const fileName = `code_${fileId}.${config.extension}`;
+      const filePath = path.join(tempDir, fileName);
+
+      // For Java, always use "Main" as the class name
       let finalCode = code;
       if (language === 'java') {
+        // Ensure the class is named "Main"
         finalCode = code.replace(/public\s+class\s+\w+/g, 'public class Main');
       }
 
-      // Prepare payload for Piston API
-      const payload = {
-        language: config.pistonLanguage,
-        version: config.pistonVersion,
-        files: [
-          {
-            name: `main.${config.extension}`,
-            content: finalCode,
-          },
-        ],
-        stdin: stdin || '',
-        args: [],
-        compile_timeout: 10000,
-        run_timeout: 5000,
-        compile_memory_limit: 256,
-        run_memory_limit: 128,
-      };
+      await fs.writeFile(filePath, finalCode, 'utf-8');
+      console.log(`📄 Created temp file: ${filePath}`);
 
-      console.log(`🚀 Sending request to Piston API for ${language}`);
+      let output = '';
+      let error = '';
+      let exitCode = 0;
 
-      // Call Piston API
-      const response = await axios.post(
-        'https://emkc.org/api/v2/piston/execute',
-        payload,
-        {
-          timeout: 12000,
-          headers: { 'Content-Type': 'application/json' },
+      // Compile if needed
+      if (config.compileCmd) {
+        try {
+          console.log(`🔨 Compiling ${language}...`);
+          await execAsync(config.compileCmd(filePath), { timeout: 10000 });
+        } catch (compileError: any) {
+          console.error('Compilation error:', compileError);
+          return res.status(200).json({
+            success: false,
+            output: '',
+            error: compileError.stderr || compileError.message || 'Compilation failed',
+            executed: false,
+            isCompileError: true,
+          });
         }
-      );
-
-      const { run, compile, language: lang, version: ver } = response.data;
-
-      // Check for Compilation Errors
-      if (compile && compile.stderr) {
-        return res.status(200).json({
-          success: false,
-          output: '',
-          error: compile.stderr,
-          executed: false,
-          isCompileError: true,
-          language: lang,
-          version: ver,
-        });
       }
 
-      // Success Response
+      // Execute Code
+      try {
+        console.log(`🚀 Executing ${language}...`);
+        const execOptions = {
+          timeout: 5000,
+          env: { ...process.env, PATH: process.env.PATH },
+        };
+
+        let cmd = config.executeCmd(filePath);
+        if (language === 'java') {
+          const javaDir = path.dirname(filePath);
+          cmd = `cd "${javaDir}" && java Main`;
+        }
+
+        const { stdout, stderr } = await execAsync(cmd, execOptions);
+        output = stdout || '';
+        error = stderr || '';
+        exitCode = 0;
+      } catch (execError: any) {
+        console.error('Execution error:', execError);
+        output = execError.stdout || '';
+        error = execError.stderr || execError.message || 'Execution failed';
+        exitCode = execError.code || 1;
+      }
+
+      // Cleanup Temp Files
+      try {
+        await fs.rm(filePath, { force: true });
+        if (config.compileCmd) {
+          const basePath = filePath.replace(`.${config.extension}`, '');
+          const extensions = ['.class', '.jar', '.exe', '.out', ''];
+          for (const ext of extensions) {
+            try {
+              await fs.rm(`${basePath}${ext}`, { force: true });
+            } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (cleanupError) {
+        console.warn('Cleanup warning:', cleanupError);
+      }
+
+      // Return Response
       return res.status(200).json({
-        success: true,
-        output: run.stdout || '',
-        error: run.stderr || '',
+        success: exitCode === 0,
+        output: output || '',
+        error: error || '',
         executed: true,
-        exitCode: run.code || 0,
-        language: lang,
-        version: ver,
-        executionTime: run.time || 'N/A',
+        exitCode: exitCode,
+        language: language,
       });
 
     } catch (error: any) {
       console.error('❌ Sandbox execution error:', error);
 
-      // Handle Axios timeout
-      if (error.code === 'ECONNABORTED') {
-        return res.status(408).json({
-          success: false,
-          message: 'Code execution timed out. Please optimize your code.',
-        });
-      }
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      } catch (e) { /* ignore */ }
 
-      // Handle Piston API errors
-      if (error.response?.data) {
-        return res.status(error.response.status || 500).json({
-          success: false,
-          message: error.response.data.message || 'Sandbox service error',
-        });
-      }
-
-      // Handle Zod validation errors
       if (error.name === 'ZodError') {
         return res.status(400).json({
           success: false,
@@ -230,7 +256,6 @@ export class SandboxController {
         });
       }
 
-      // Generic error
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to execute code',

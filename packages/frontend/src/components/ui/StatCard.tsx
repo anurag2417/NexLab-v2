@@ -4,30 +4,25 @@ interface StatCardProps {
   title: string;
   value: string | number;
   icon: React.ReactNode;
-  trend?: { value: number; isPositive: boolean };
-  color?: 'primary' | 'secondary' | 'success';
+  color?: 'emerald' | 'info' | 'warning' | 'error';
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ title, value, icon, trend, color = 'primary' }) => {
+export const StatCard: React.FC<StatCardProps> = ({ title, value, icon = 'emerald' }) => {
   const colorMap = {
-    primary: 'bg-primary-50 text-primary-600',
-    secondary: 'bg-secondary-50 text-secondary-600',
-    success: 'bg-success-50 text-success-600',
+    emerald: 'bg-[#10B981]',
+    info: 'bg-[#60A5FA]',
+    warning: 'bg-[#FBBF24]',
+    error: 'bg-[#F87171]',
   };
 
   return (
-    <div className="bg-background-light rounded-xl border border-border p-6 shadow-sm">
+    <div className="bg-[#161A19] rounded-xl border border-[#2A302E] p-6 shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-all duration-300">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-text-muted">{title}</p>
-          <p className="text-2xl font-bold text-text-heading mt-1">{value}</p>
-          {trend && (
-            <p className={`text-xs mt-1 flex items-center ${trend.isPositive ? 'text-success-600' : 'text-red-500'}`}>
-              {trend.isPositive ? '↑' : '↓'} {trend.value}% from last month
-            </p>
-          )}
+          <p className="text-sm font-medium text-[#9CA3A0]">{title}</p>
+          <p className="text-2xl font-bold text-[#EDEFEE] mt-1">{value}</p>
         </div>
-        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${colorMap[color]}`}>
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-[#161A19] border border-[#2A302E]`}>
           {icon}
         </div>
       </div>
