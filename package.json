@@ -6,7 +6,9 @@
     "build:shared": "npm run build -w @nexlab/shared",
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "npm run build -w frontend",
+    "build:backend": "npm run build -w backend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
