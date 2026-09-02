@@ -5,28 +5,41 @@ import { IUser } from '@nexlab/shared';
 
 interface AuthState {
   user: IUser | null;
+  token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<{ success: boolean }>;
   setUser: (user: IUser | null) => void;
+  setToken: (token: string | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
+      token: null,
       isLoading: true,
 
       login: async (email, password) => {
         try {
+          console.log('🔐 Attempting login...');
           const response = await api.post('/auth/login', { email, password });
-          const userData = response.data.user;
-          if (userData && !userData._id && userData.id) {
-            userData._id = userData.id;
-          }
-          set({ user: userData });
+          console.log('📥 Login response:', response.data);
+          
+          const { token, user } = response.data;
+          
+          console.log('🔑 Token from response:', token ? 'Found' : 'Not found');
+          
+          set({ 
+            user: user,
+            token: token
+          });
+          
+          console.log('✅ User set in store:', user);
+          console.log('✅ Token set in store:', token ? 'Yes' : 'No');
+          
           return { success: true };
         } catch (error: any) {
           console.error('Login error:', error);
@@ -39,12 +52,22 @@ export const useAuthStore = create<AuthState>()(
 
       register: async (name, email, password) => {
         try {
+          console.log('🔐 Attempting registration...');
           const response = await api.post('/auth/register', { name, email, password });
-          const userData = response.data.user;
-          if (userData && !userData._id && userData.id) {
-            userData._id = userData.id;
-          }
-          set({ user: userData });
+          console.log('📥 Register response:', response.data);
+          
+          const { token, user } = response.data;
+          
+          console.log('🔑 Token from response:', token ? 'Found' : 'Not found');
+          
+          set({ 
+            user: user,
+            token: token
+          });
+          
+          console.log('✅ User set in store:', user);
+          console.log('✅ Token set in store:', token ? 'Yes' : 'No');
+          
           return { success: true };
         } catch (error: any) {
           console.error('Registration error:', error);
@@ -61,11 +84,21 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error('Logout error:', error);
         }
-        set({ user: null });
+        set({ user: null, token: null });
       },
 
       checkAuth: async () => {
         try {
+          // Get token from store
+          const token = get().token;
+          console.log('🔍 Checking auth - token in store:', token ? 'Found' : 'Not found');
+          
+          if (!token) {
+            console.warn('⚠️ No token found in store');
+            set({ isLoading: false });
+            return { success: false };
+          }
+          
           const response = await api.get('/auth/me');
           console.log('🔍 Auth check response:', response.data);
           
@@ -75,13 +108,17 @@ export const useAuthStore = create<AuthState>()(
           }
           
           set({ 
-            user: userData, 
+            user: userData,
             isLoading: false 
           });
           return { success: true };
-        } catch (error) {
+        } catch (error: any) {
           console.error('Auth check error:', error);
-          set({ user: null, isLoading: false });
+          if (error.response?.status === 401) {
+            set({ user: null, token: null, isLoading: false });
+          } else {
+            set({ isLoading: false });
+          }
           return { success: false };
         }
       },
@@ -92,11 +129,16 @@ export const useAuthStore = create<AuthState>()(
         }
         set({ user });
       },
+
+      setToken: (token) => {
+        set({ token });
+      },
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({ 
-        user: state.user 
+        user: state.user,
+        token: state.token
       }),
     }
   )
@@ -106,5 +148,6 @@ export const useAuthStore = create<AuthState>()(
 if (typeof window !== 'undefined') {
   window.addEventListener('auth:unauthorized', () => {
     useAuthStore.getState().setUser(null);
+    useAuthStore.getState().setToken(null);
   });
 }

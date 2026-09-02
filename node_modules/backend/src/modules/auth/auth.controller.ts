@@ -19,7 +19,6 @@ export class AuthController {
     try {
       const { name, email, password } = registerSchema.parse(req.body);
 
-      // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         return res.status(400).json({
@@ -28,7 +27,6 @@ export class AuthController {
         });
       }
 
-      // Create user with default values
       const user = await User.create({
         name,
         email,
@@ -42,11 +40,15 @@ export class AuthController {
         progress: new Map(),
       });
 
-      // Set the JWT cookie
+      // Generate token
+      const token = AuthService.generateToken(user._id.toString(), user.email);
+      
+      // Set cookie
       AuthService.setTokenCookie(res, user._id.toString(), user.email);
 
       res.status(201).json({
         success: true,
+        token: token, // ✅ Return token in response body
         user: {
           _id: user._id,
           id: user._id,
@@ -104,10 +106,15 @@ export class AuthController {
         });
       }
 
+      // Generate token
+      const token = AuthService.generateToken(user._id.toString(), user.email);
+      
+      // Set cookie
       AuthService.setTokenCookie(res, user._id.toString(), user.email);
 
       res.status(200).json({
         success: true,
+        token: token, // ✅ Return token in response body
         user: {
           _id: user._id,
           id: user._id,

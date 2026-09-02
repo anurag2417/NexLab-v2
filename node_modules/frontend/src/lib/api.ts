@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { useAuthStore } from '../stores/authStore';
 
-// Get the correct API URL
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 console.log('📡 API URL:', API_URL);
 
 export const api = axios.create({
@@ -12,31 +12,25 @@ export const api = axios.create({
   },
 });
 
-// Request interceptor
+// Request interceptor - ALWAYS add token from store
 api.interceptors.request.use(
   (config) => {
-    // Always add withCredentials
-    config.withCredentials = true;
-    
-    // Try to get token from cookie for Authorization header
-    const cookies = document.cookie.split(';');
-    let token = '';
-    for (const cookie of cookies) {
-      const [key, value] = cookie.trim().split('=');
-      if (key === 'token') {
-        token = value;
-        break;
-      }
-    }
-    
-    // If token exists, add to Authorization header
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('🔑 Added token to Authorization header');
-    }
+    // Get token from store
+    const token = useAuthStore.getState().token;
     
     console.log(`🌐 ${config.method?.toUpperCase()} ${config.url}`);
-    console.log('🍪 Cookie header:', document.cookie);
+    console.log('🔑 Token in store:', token ? 'Yes' : 'No');
+    
+    // ALWAYS add Authorization header if token exists
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ Added token to Authorization header');
+    } else {
+      console.warn('⚠️ No token found in store');
+    }
+    
+    config.withCredentials = true;
+    
     return config;
   },
   (error) => {
@@ -58,6 +52,7 @@ api.interceptors.response.use(
       data: error.response?.data,
     });
 
+    // Only logout on 401 from non-auth endpoints
     const isAuthEndpoint = error.config?.url?.includes('/auth/');
     const isLoginPage = window.location.pathname === '/login';
     const isRegisterPage = window.location.pathname === '/register';

@@ -1,12 +1,18 @@
 import { Request, Response } from 'express';
-import axios from 'axios';
 import { z } from 'zod';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs/promises';
+import path from 'path';
+import { randomUUID } from 'crypto';
 import { redisClient } from '../../config/redis.js';
+
+const execAsync = promisify(exec);
 
 // Validation schema for code execution
 const executeSchema = z.object({
   language: z.enum([
-    'python', 'javascript', 'typescript', 'java', 'cpp',
+    'python', 'javascript', 'typescript', 'java', 'cpp', 
     'c', 'go', 'rust', 'ruby', 'php', 'swift', 'kotlin'
   ]),
   code: z.string().max(50000, 'Code exceeds 50KB limit'),
@@ -15,78 +21,108 @@ const executeSchema = z.object({
   version: z.string().optional(),
 });
 
-// Language file extensions and default versions
-const LANGUAGE_CONFIG: Record<string, { extension: string; defaultVersion: string }> = {
-  python: { extension: 'py', defaultVersion: '3.10.0' },
-  javascript: { extension: 'js', defaultVersion: '18.15.0' },
-  typescript: { extension: 'ts', defaultVersion: '5.0.3' },
-  java: { extension: 'java', defaultVersion: '17.0.1' },
-  cpp: { extension: 'cpp', defaultVersion: '10.2.0' },
-  c: { extension: 'c', defaultVersion: '10.2.0' },
-  go: { extension: 'go', defaultVersion: '1.19.0' },
-  rust: { extension: 'rs', defaultVersion: '1.70.0' },
-  ruby: { extension: 'rb', defaultVersion: '3.2.0' },
-  php: { extension: 'php', defaultVersion: '8.2.0' },
-  swift: { extension: 'swift', defaultVersion: '5.8.0' },
-  kotlin: { extension: 'kt', defaultVersion: '1.8.0' },
+// Language file extensions and execution commands
+const LANGUAGE_CONFIG: Record<string, { 
+  extension: string; 
+  executeCmd: (filePath: string) => string;
+  compileCmd?: (filePath: string) => string;
+}> = {
+  python: { 
+    extension: 'py', 
+    executeCmd: (filePath) => `python3 "${filePath}"` 
+  },
+  javascript: { 
+    extension: 'js', 
+    executeCmd: (filePath) => `node "${filePath}"` 
+  },
+  typescript: { 
+    extension: 'ts', 
+    executeCmd: (filePath) => `npx ts-node "${filePath}"` 
+  },
+  java: { 
+    extension: 'java', 
+    compileCmd: (filePath) => `javac "${filePath}"`,
+    executeCmd: (filePath) => {
+      const dir = path.dirname(filePath);
+      const className = path.basename(filePath, '.java');
+      return `cd "${dir}" && java "${className}"`;
+    }
+  },
+  cpp: { 
+    extension: 'cpp', 
+    compileCmd: (filePath) => {
+      const outputPath = filePath.replace('.cpp', '');
+      return `g++ "${filePath}" -o "${outputPath}"`;
+    },
+    executeCmd: (filePath) => `"${filePath.replace('.cpp', '')}"`
+  },
+  c: { 
+    extension: 'c', 
+    compileCmd: (filePath) => {
+      const outputPath = filePath.replace('.c', '');
+      return `gcc "${filePath}" -o "${outputPath}"`;
+    },
+    executeCmd: (filePath) => `"${filePath.replace('.c', '')}"`
+  },
+  go: { 
+    extension: 'go', 
+    executeCmd: (filePath) => `go run "${filePath}"` 
+  },
+  rust: { 
+    extension: 'rs', 
+    compileCmd: (filePath) => {
+      const outputPath = filePath.replace('.rs', '');
+      return `rustc "${filePath}" -o "${outputPath}"`;
+    },
+    executeCmd: (filePath) => `"${filePath.replace('.rs', '')}"`
+  },
+  ruby: { 
+    extension: 'rb', 
+    executeCmd: (filePath) => `ruby "${filePath}"` 
+  },
+  php: { 
+    extension: 'php', 
+    executeCmd: (filePath) => `php "${filePath}"` 
+  },
+  swift: { 
+    extension: 'swift', 
+    executeCmd: (filePath) => `swift "${filePath}"` 
+  },
+  kotlin: { 
+    extension: 'kt', 
+    compileCmd: (filePath) => `kotlinc "${filePath}" -include-runtime -d "${filePath.replace('.kt', '.jar')}"`,
+    executeCmd: (filePath) => `java -jar "${filePath.replace('.kt', '.jar')}"`
+  },
 };
 
-// Sample code snippets for each language
+// Sample code snippets
 export const SAMPLE_CODE: Record<string, string> = {
   python: `# Welcome to NexLab Python Sandbox!
 # Write your Python code here
 
-def greet(name):
-    return f"Hello, {name}! Welcome to NexLab!"
-
-name = input("Enter your name: ")
-print(greet(name))
-print("\\n✨ Python execution successful!")`,
+print("Hello, World!")
+print("This is a Python program running in NexLab!")`,
 
   javascript: `// Welcome to NexLab JavaScript Sandbox!
 // Write your JavaScript code here
 
-function greet(name) {
-  return \`Hello, \${name}! Welcome to NexLab!\`;
-}
-
-const name = "Student";
-console.log(greet(name));
-console.log("\\n✨ JavaScript execution successful!");`,
+console.log("Hello, World!");
+console.log("This is JavaScript running in NexLab!");`,
 
   typescript: `// Welcome to NexLab TypeScript Sandbox!
 // Write your TypeScript code here
 
-interface Greeting {
-  message: string;
-  timestamp: Date;
-}
-
-function greet(name: string): Greeting {
-  return {
-    message: \`Hello, \${name}! Welcome to NexLab!\`,
-    timestamp: new Date()
-  };
-}
-
-const result = greet("Student");
-console.log(result.message);
-console.log("\\n✨ TypeScript execution successful!");`,
+const message: string = "Hello, World!";
+console.log(message);
+console.log("TypeScript is working in NexLab!");`,
 
   java: `// Welcome to NexLab Java Sandbox!
 // Write your Java code here
 
-import java.util.Scanner;
-
 public class Main {
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter your name: ");
-        String name = scanner.nextLine();
-        
-        System.out.println("Hello, " + name + "! Welcome to NexLab!");
-        System.out.println("\\n✨ Java execution successful!");
-        scanner.close();
+        System.out.println("Hello, World!");
+        System.out.println("Java is working in NexLab!");
     }
 }`,
 
@@ -94,17 +130,11 @@ public class Main {
 // Write your C++ code here
 
 #include <iostream>
-#include <string>
-
 using namespace std;
 
 int main() {
-    string name;
-    cout << "Enter your name: ";
-    getline(cin, name);
-    
-    cout << "Hello, " << name << "! Welcome to NexLab!" << endl;
-    cout << "\\n✨ C++ execution successful!" << endl;
+    cout << "Hello, World!" << endl;
+    cout << "C++ is working in NexLab!" << endl;
     return 0;
 }`,
 
@@ -114,12 +144,8 @@ int main() {
 #include <stdio.h>
 
 int main() {
-    char name[100];
-    printf("Enter your name: ");
-    fgets(name, sizeof(name), stdin);
-    
-    printf("Hello, %s! Welcome to NexLab!\\n", name);
-    printf("\\n✨ C execution successful!\\n");
+    printf("Hello, World!\\n");
+    printf("C is working in NexLab!\\n");
     return 0;
 }`,
 
@@ -131,51 +157,30 @@ package main
 import "fmt"
 
 func main() {
-    var name string
-    fmt.Print("Enter your name: ")
-    fmt.Scanln(&name)
-    
-    fmt.Printf("Hello, %s! Welcome to NexLab!\\n", name)
-    fmt.Println("\\n✨ Go execution successful!")
+    fmt.Println("Hello, World!")
+    fmt.Println("Go is working in NexLab!");
 }`,
 
   rust: `// Welcome to NexLab Rust Sandbox!
 // Write your Rust code here
 
-use std::io;
-
 fn main() {
-    println!("Welcome to NexLab Sandbox!");
-    
-    // Simple arithmetic
-    let x = 10;
-    let y = 20;
-    let sum = x + y;
-    
-    println!("Sum of {} and {} is: {}", x, y, sum);
-    println!("\\n✨ Rust execution successful!");
+    println!("Hello, World!");
+    println!("Rust is working in NexLab!");
 }`,
 
   ruby: `# Welcome to NexLab Ruby Sandbox!
 # Write your Ruby code here
 
-def greet(name)
-  puts "Hello, #{name}! Welcome to NexLab!"
-end
-
-print "Enter your name: "
-name = gets.chomp
-
-greet(name)
-puts "\\n✨ Ruby execution successful!"`,
+puts "Hello, World!"
+puts "Ruby is working in NexLab!"`,
 
   php: `<?php
 // Welcome to NexLab PHP Sandbox!
 // Write your PHP code here
 
-$name = "Student";
-echo "Hello, $name! Welcome to NexLab!\\n";
-echo "\\n✨ PHP execution successful!\\n";
+echo "Hello, World!\\n";
+echo "PHP is working in NexLab!\\n";
 ?>`,
 
   swift: `// Welcome to NexLab Swift Sandbox!
@@ -183,34 +188,25 @@ echo "\\n✨ PHP execution successful!\\n";
 
 import Foundation
 
-print("Welcome to NexLab Sandbox!")
-print("Enter your name: ", terminator: "")
-
-if let name = readLine() {
-    print("Hello, \\(name)! Welcome to NexLab!")
-    print("\\n✨ Swift execution successful!")
-}`,
+print("Hello, World!")
+print("Swift is working in NexLab!")`,
 
   kotlin: `// Welcome to NexLab Kotlin Sandbox!
 // Write your Kotlin code here
 
 fun main() {
-    println("Welcome to NexLab Sandbox!")
-    
-    val name = "Student"
-    println("Hello, $name! Welcome to NexLab!")
-    println("\\n✨ Kotlin execution successful!")
+    println("Hello, World!")
+    println("Kotlin is working in NexLab!")
 }`,
 };
 
 export class SandboxController {
   static async execute(req: Request, res: Response) {
+    const tempDir = path.join(process.cwd(), 'temp');
+    
     try {
-      // Log everything for debugging
       console.log('🏖️ Sandbox execute called');
       console.log('👤 req.userId:', req.userId);
-      console.log('🍪 req.cookies:', req.cookies);
-      console.log('📋 req.headers.authorization:', req.headers.authorization);
       console.log('📦 req.body:', req.body);
 
       // Check if user is authenticated
@@ -219,11 +215,10 @@ export class SandboxController {
         return res.status(401).json({
           success: false,
           message: 'Authentication required. Please log in again.',
-          details: 'No user ID found in request'
         });
       }
 
-      const { language, code, stdin, args, version } = executeSchema.parse(req.body);
+      const { language, code, stdin } = executeSchema.parse(req.body);
       const userId = req.userId;
 
       console.log(`📝 Executing ${language} code for user ${userId}`);
@@ -233,15 +228,19 @@ export class SandboxController {
       if (redisClient.isReady) {
         const current = await redisClient.incr(rateKey);
         if (current === 1) await redisClient.expire(rateKey, 60);
-        if (current > 10) {
+        if (current > 5) {
           return res.status(429).json({
             success: false,
-            message: 'Rate limit exceeded. 10 executions per minute allowed.',
+            message: 'Rate limit exceeded. 5 executions per minute allowed.',
           });
         }
       }
 
-      // ---- Prepare Payload for Piston API ----
+      // ---- Create Temp Directory ----
+      await fs.mkdir(tempDir, { recursive: true });
+
+      // ---- Create Temp File ----
+      const fileId = randomUUID();
       const config = LANGUAGE_CONFIG[language];
       if (!config) {
         return res.status(400).json({
@@ -250,80 +249,97 @@ export class SandboxController {
         });
       }
 
-      const payload = {
-        language: language,
-        version: version || config.defaultVersion,
-        files: [
-          {
-            name: `main.${config.extension}`,
-            content: code,
-          },
-        ],
-        stdin: stdin || '',
-        args: args || [],
-        compile_timeout: 10000,
-        run_timeout: 5000,
-        compile_memory_limit: 256,
-        run_memory_limit: 128,
-      };
+      const fileName = `code_${fileId}.${config.extension}`;
+      const filePath = path.join(tempDir, fileName);
 
-      console.log(`🚀 Sending request to Piston API for ${language}`);
+      // Write code to file
+      await fs.writeFile(filePath, code, 'utf-8');
 
-      // ---- Call Piston API ----
-      const response = await axios.post(
-        'https://emkc.org/api/v2/piston/execute',
-        payload,
-        {
-          timeout: 12000,
-          headers: { 'Content-Type': 'application/json' },
+      console.log(`📄 Created temp file: ${filePath}`);
+
+      let output = '';
+      let error = '';
+      let exitCode = 0;
+
+      // ---- Compile if needed ----
+      if (config.compileCmd) {
+        try {
+          console.log(`🔨 Compiling ${language}...`);
+          await execAsync(config.compileCmd(filePath), { timeout: 10000 });
+        } catch (compileError: any) {
+          console.error('Compilation error:', compileError);
+          return res.status(200).json({
+            success: false,
+            output: '',
+            error: compileError.stderr || compileError.message || 'Compilation failed',
+            executed: false,
+            isCompileError: true,
+          });
         }
-      );
-
-      const { run, compile, language: lang, version: ver } = response.data;
-
-      // ---- Check for Compilation Errors ----
-      if (compile && compile.stderr) {
-        return res.status(200).json({
-          success: false,
-          output: '',
-          error: compile.stderr,
-          executed: false,
-          isCompileError: true,
-          language: lang,
-          version: ver,
-        });
       }
 
-      // ---- Success Response ----
+      // ---- Execute Code ----
+      try {
+        console.log(`🚀 Executing ${language}...`);
+        const execOptions = {
+          timeout: 5000,
+          env: { ...process.env, PATH: process.env.PATH },
+        };
+
+        // For Java, we need to handle the class name differently
+        let cmd = config.executeCmd(filePath);
+        if (language === 'java') {
+          // Java expects the file name to match the class name
+          const className = 'Main';
+          const javaDir = path.dirname(filePath);
+          cmd = `cd "${javaDir}" && java ${className}`;
+        }
+
+        const { stdout, stderr } = await execAsync(cmd, execOptions);
+        output = stdout || '';
+        error = stderr || '';
+        exitCode = 0;
+      } catch (execError: any) {
+        console.error('Execution error:', execError);
+        output = execError.stdout || '';
+        error = execError.stderr || execError.message || 'Execution failed';
+        exitCode = execError.code || 1;
+      }
+
+      // ---- Cleanup Temp Files ----
+      try {
+        await fs.rm(filePath, { force: true });
+        // Clean up compiled files
+        if (config.compileCmd) {
+          const basePath = filePath.replace(`.${config.extension}`, '');
+          const extensions = ['.class', '.jar', '.exe', '.out', ''];
+          for (const ext of extensions) {
+            try {
+              await fs.rm(`${basePath}${ext}`, { force: true });
+            } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (cleanupError) {
+        console.warn('Cleanup warning:', cleanupError);
+      }
+
+      // ---- Return Response ----
       return res.status(200).json({
-        success: true,
-        output: run.stdout || '',
-        error: run.stderr || '',
+        success: exitCode === 0,
+        output: output || '',
+        error: error || '',
         executed: true,
-        exitCode: run.code || 0,
-        language: lang,
-        version: ver,
-        executionTime: run.time || 'N/A',
+        exitCode: exitCode,
+        language: language,
       });
 
     } catch (error: any) {
       console.error('❌ Sandbox execution error:', error);
 
-      // Handle Axios timeout
-      if (error.code === 'ECONNABORTED') {
-        return res.status(408).json({
-          success: false,
-          message: 'Code execution timed out. Please optimize your code.',
-        });
-      }
-
-      // Handle Piston API errors
-      if (error.response?.data) {
-        return res.status(error.response.status || 500).json({
-          success: false,
-          message: error.response.data.message || 'Sandbox service error',
-        });
-      }
+      // Cleanup temp directory if possible
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      } catch (e) { /* ignore */ }
 
       // Handle Zod validation errors
       if (error.name === 'ZodError') {
@@ -348,7 +364,6 @@ export class SandboxController {
         id: key,
         name: key.charAt(0).toUpperCase() + key.slice(1),
         extension: LANGUAGE_CONFIG[key].extension,
-        defaultVersion: LANGUAGE_CONFIG[key].defaultVersion,
         sample: SAMPLE_CODE[key] || `// Write your ${key} code here`,
       }));
 

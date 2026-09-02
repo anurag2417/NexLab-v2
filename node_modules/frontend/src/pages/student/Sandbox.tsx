@@ -91,14 +91,20 @@ export const Sandbox: React.FC = () => {
     setResult(null);
 
     try {
+      console.log('🚀 Sending code execution request...');
+      console.log('📝 Code:', code);
+      console.log('🔤 Language:', selectedLanguage);
+      console.log('📥 Stdin:', stdin);
+
       const response = await api.post('/sandbox/execute', {
         language: selectedLanguage,
         code: code,
         stdin: stdin,
       });
 
+      console.log('✅ Execution response:', response.data);
       setResult(response.data);
-      
+
       // Scroll to output
       if (outputRef.current) {
         setTimeout(() => {
@@ -106,13 +112,14 @@ export const Sandbox: React.FC = () => {
         }, 100);
       }
     } catch (error: any) {
-      console.error('Execution error:', error);
+      console.error('❌ Execution error:', error);
+      // Don't log out on error - just show the error message
       setResult({
         success: false,
         output: '',
-        error: error.response?.data?.message || 'Failed to execute code.',
+        error: error.response?.data?.message || error.message || 'Failed to execute code.',
         executed: false,
-        message: error.response?.data?.message || 'Failed to execute code.',
+        message: error.response?.data?.message || error.message || 'Failed to execute code.',
       });
     } finally {
       setIsExecuting(false);
@@ -184,9 +191,8 @@ export const Sandbox: React.FC = () => {
                   <button
                     key={lang.id}
                     onClick={() => handleLanguageChange(lang.id)}
-                    className={`w-full text-left px-4 py-2 hover:bg-background-muted transition-colors flex items-center gap-2 ${
-                      selectedLanguage === lang.id ? 'bg-primary-50 text-primary-600' : ''
-                    }`}
+                    className={`w-full text-left px-4 py-2 hover:bg-background-muted transition-colors flex items-center gap-2 ${selectedLanguage === lang.id ? 'bg-primary-50 text-primary-600' : ''
+                      }`}
                   >
                     <span className={`w-2 h-2 rounded-full ${getLanguageColor(lang.id)}`} />
                     <span>{lang.name}</span>
@@ -285,9 +291,8 @@ export const Sandbox: React.FC = () => {
                 <Terminal className="w-4 h-4 text-text-muted" />
                 <span className="text-sm font-medium text-text-heading">Output</span>
                 {result && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    result.success ? 'bg-success-100 text-success-700' : 'bg-red-100 text-red-700'
-                  }`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${result.success ? 'bg-success-100 text-success-700' : 'bg-red-100 text-red-700'
+                    }`}>
                     {result.success ? 'Success' : 'Error'}
                   </span>
                 )}

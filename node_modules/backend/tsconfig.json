@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "composite": true   // Required for monorepo references
+    "composite": true
   },
   "include": ["src/**/*"],
   "references": [{ "path": "../shared" }]
