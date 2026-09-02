@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: nexlab-backend
+    runtime: node
+    plan: free
+    buildCommand: |
+      npm install
+      npm run build:shared
+      npm run build -w backend
+    startCommand: npm run start -w backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: REDIS_URL
+        value: redis://localhost:6379
+      - key: CLIENT_URL
+        value: http://localhost:5173
