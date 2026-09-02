@@ -23,13 +23,17 @@ export class CourseService {
     
     if (filters.category) query.category = filters.category;
     if (filters.level) query.level = filters.level;
-    if (filters.isPublished !== undefined) query.isPublished = filters.isPublished;
+    if (filters.isPublished !== undefined) {
+      query.isPublished = filters.isPublished;
+    }
     if (filters.search) {
       query.$or = [
         { title: { $regex: filters.search, $options: 'i' } },
         { description: { $regex: filters.search, $options: 'i' } },
       ];
     }
+
+    console.log('Course query:', query);
 
     return await Course.find(query)
       .populate('instructor', 'name email')
@@ -76,17 +80,26 @@ export class CourseService {
 
   // Enroll a student
   static async enrollStudent(courseId: string, userId: string): Promise<boolean> {
-    const course = await Course.findById(courseId);
-    if (!course) return false;
-    
-    const userIdObj = new Types.ObjectId(userId);
-    if (course.enrolledStudents.includes(userIdObj)) {
-      return false; // Already enrolled
+    try {
+      const course = await Course.findById(courseId);
+      if (!course) return false;
+      
+      const userIdObj = new Types.ObjectId(userId);
+      
+      // Check if already enrolled
+      if (course.enrolledStudents.some(id => id.toString() === userId)) {
+        return false; // Already enrolled
+      }
+      
+      course.enrolledStudents.push(userIdObj);
+      await course.save();
+      
+      console.log(`✅ Student ${userId} enrolled in course ${courseId}`);
+      return true;
+    } catch (error) {
+      console.error('Error enrolling student:', error);
+      return false;
     }
-    
-    course.enrolledStudents.push(userIdObj);
-    await course.save();
-    return true;
   }
 
   // Get popular courses (by enrollment count)

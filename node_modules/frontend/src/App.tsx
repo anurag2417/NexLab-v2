@@ -16,13 +16,15 @@ import { StudentCourses } from './pages/student/Courses';
 import { Sandbox } from './pages/student/Sandbox';
 import { Leaderboard } from './pages/student/Leaderboard';
 import { Profile } from './pages/student/Profile';
+import { CoursePlayer } from './pages/student/CoursePlayer';
 
 // Admin Pages (placeholders - we'll build these next)
 const AdminDashboard: React.FC = () => <div className="py-8">Admin Dashboard - Coming soon</div>;
-const AdminCourses: React.FC = () => <div className="py-8">Admin Courses - Coming soon</div>;
+//const AdminCourses: React.FC = () => <div className="py-8">Admin Courses - Coming soon</div>;
 const AdminUsers: React.FC = () => <div className="py-8">Admin Users - Coming soon</div>;
 const AdminAnalytics: React.FC = () => <div className="py-8">Admin Analytics - Coming soon</div>;
 import { CourseForm } from './pages/admin/CourseForm';
+import { AdminCourses } from './pages/admin/Courses';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({
@@ -67,16 +69,17 @@ function App() {
           <Route path="/sandbox" element={<Sandbox />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="course/:courseId" element={<CoursePlayer />} />
         </Route>
 
         {/* Protected Admin Routes */}
         <Route element={<ProtectedRoute adminOnly><RootLayout /></ProtectedRoute>}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/courses" element={<AdminCourses />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/analytics" element={<AdminAnalytics />} />
-          <Route path="courses/create" element={<CourseForm />} />
-          <Route path="courses/edit/:id" element={<CourseForm />} />
+          <Route path="admin/dashboard" element={<AdminDashboard />} />
+          <Route path="admin/courses" element={<AdminCourses />} />        // ← THIS must exist
+          <Route path="admin/courses/create" element={<CourseForm />} />   // ← THIS must exist
+          <Route path="admin/courses/edit/:id" element={<CourseForm />} /> // ← THIS must exist
+          <Route path="admin/users" element={<AdminUsers />} />
+          <Route path="admin/analytics" element={<AdminAnalytics />} />
         </Route>
 
         {/* Catch All */}

@@ -1,6 +1,7 @@
 export type UserRole = 'student' | 'admin';
 export interface IUser {
     _id: string;
+    id?: string;
     name: string;
     email: string;
     role: UserRole;
@@ -9,15 +10,9 @@ export interface IUser {
     streak: number;
     badges: string[];
     enrolledCourses?: string[];
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
-export interface IUserPublic {
+export interface IUserPublic extends Omit<IUser, 'email' | '_id'> {
     id: string;
-    name: string;
-    role: UserRole;
-    xp: number;
-    level: number;
-    streak: number;
-    badges: string[];
 }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { 
-  Home, BookOpen, Code2, Trophy, User, Settings, 
+  Home, BookOpen, Code2, Trophy, User, 
   Users, BarChart3, GraduationCap, LogOut, Menu, X,
   LayoutDashboard 
 } from 'lucide-react';
@@ -10,7 +10,7 @@ import {
 // Student Navigation
 const studentNav = [
   { to: '/dashboard', icon: Home, label: 'Dashboard' },
-  { to: '/courses', icon: BookOpen, label: 'My Courses' },
+  { to: '/courses', icon: BookOpen, label: 'Browse Courses' },
   { to: '/sandbox', icon: Code2, label: 'Sandbox' },
   { to: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { to: '/profile', icon: User, label: 'Profile' },

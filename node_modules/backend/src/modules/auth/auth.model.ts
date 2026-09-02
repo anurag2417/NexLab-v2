@@ -1,11 +1,22 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 import { IUser } from '@nexlab/shared';
+import bcrypt from 'bcryptjs';
 
-// Create a clean Document interface that extends Mongoose's Document
-// and matches our IUser shape without conflicting on '_id'
-export interface IUserDocument extends Omit<IUser, '_id'>, Document {
-  _id: Types.ObjectId; // Mongoose's actual type
+// Fix: Use proper type extension without conflicting properties
+export interface IUserDocument extends Document {
+  _id: Types.ObjectId;
+  name: string;
+  email: string;
   password: string;
+  role: 'student' | 'admin';
+  xp: number;
+  level: number;
+  streak: number;
+  badges: string[];
+  enrolledCourses: Types.ObjectId[];
+  progress: Map<string, string[]>;
+  createdAt: Date;
+  updatedAt: Date;
   comparePassword(candidate: string): Promise<boolean>;
 }
 
@@ -20,13 +31,31 @@ const UserSchema = new Schema<IUserDocument>(
     streak: { type: Number, default: 0 },
     badges: { type: [String], default: [] },
     enrolledCourses: [{ type: Schema.Types.ObjectId, ref: 'Course' }],
+    progress: { 
+      type: Map, 
+      of: [String], 
+      default: () => new Map()
+    },
   },
   { timestamps: true }
 );
 
+// Hash password before saving
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// Password comparison method
 UserSchema.methods.comparePassword = async function (candidate: string) {
-  const bcrypt = await import('bcryptjs');
-  return bcrypt.default.compare(candidate, this.password);
+  return bcrypt.compare(candidate, this.password);
 };
 
 export const User = mongoose.model<IUserDocument>('User', UserSchema);

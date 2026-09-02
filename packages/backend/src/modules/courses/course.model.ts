@@ -6,7 +6,7 @@ export interface ILesson {
   title: string;
   description?: string;
   videoUrl: string;
-  duration?: number; // in minutes
+  duration?: number;
   order: number;
   isFree?: boolean;
 }
@@ -43,7 +43,7 @@ const LessonSchema = new Schema<ILesson>({
 const CourseSchema = new Schema<ICourse>(
   {
     title: { type: String, required: true, trim: true },
-    slug: { type: String, required: true, unique: true, lowercase: true },
+    slug: { type: String, unique: true, lowercase: true },
     description: { type: String, required: true },
     thumbnail: { type: String },
     category: { type: String, required: true },
@@ -63,9 +63,9 @@ const CourseSchema = new Schema<ICourse>(
   { timestamps: true }
 );
 
-// Auto-generate slug from title
+// Auto-generate slug from title (if not provided)
 CourseSchema.pre('save', function(next) {
-  if (this.isModified('title')) {
+  if (this.isModified('title') || !this.slug) {
     this.slug = this.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')

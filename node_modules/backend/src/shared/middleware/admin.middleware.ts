@@ -12,6 +12,7 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction) =
     }
     next();
   } catch (error) {
+    console.error('Error verifying admin status:', error);
     return res.status(500).json({
       success: false,
       message: 'Error verifying admin status',

@@ -42,7 +42,6 @@ export const AdminCourses: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this course?')) return;
-    
     try {
       await api.delete(`/courses/${id}`);
       setCourses(courses.filter(c => c._id !== id));
@@ -60,18 +59,18 @@ export const AdminCourses: React.FC = () => {
     }
   };
 
-  const filteredCourses = courses.filter(c => 
+  const filteredCourses = courses.filter(c =>
     c.title.toLowerCase().includes(search.toLowerCase()) ||
     c.category.toLowerCase().includes(search.toLowerCase())
   );
 
   const getLevelBadge = (level: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       beginner: 'bg-success-100 text-success-700',
       intermediate: 'bg-secondary-100 text-secondary-700',
       advanced: 'bg-red-100 text-red-700',
     };
-    return colors[level as keyof typeof colors] || 'bg-gray-100 text-gray-700';
+    return colors[level] || 'bg-gray-100 text-gray-700';
   };
 
   if (loading) {
@@ -84,7 +83,7 @@ export const AdminCourses: React.FC = () => {
 
   return (
     <div className="py-8">
-      {/* Header */}
+      {/* Header with Create Button */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-text-heading">Manage Courses</h1>
@@ -118,6 +117,14 @@ export const AdminCourses: React.FC = () => {
       {filteredCourses.length === 0 ? (
         <div className="bg-background-light border border-border rounded-xl p-12 text-center">
           <p className="text-text-muted">No courses found. Create your first course!</p>
+          <Button
+            variant="primary"
+            onClick={() => navigate('/admin/courses/create')}
+            className="mt-4 gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Your First Course
+          </Button>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -129,7 +136,7 @@ export const AdminCourses: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 {/* Course Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
+                  <div className="flex items-center gap-3 mb-1 flex-wrap">
                     <h3 className="text-lg font-semibold text-text-heading truncate">
                       {course.title}
                     </h3>
@@ -147,7 +154,7 @@ export const AdminCourses: React.FC = () => {
                     )}
                   </div>
                   <p className="text-sm text-text-body truncate">{course.description}</p>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-text-muted">
+                  <div className="flex items-center gap-4 mt-2 text-xs text-text-muted flex-wrap">
                     <span>Category: {course.category}</span>
                     <span>•</span>
                     <span>${course.price}</span>

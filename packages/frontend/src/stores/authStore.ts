@@ -9,7 +9,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
-  checkAuth: () => Promise<void>;
+  checkAuth: () => Promise<{ success: boolean }>;
+  setUser: (user: IUser | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -20,48 +21,90 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email, password) => {
         try {
-          const res = await api.post('/auth/login', { email, password });
-          set({ user: res.data.user });
+          const response = await api.post('/auth/login', { email, password });
+          const userData = response.data.user;
+          if (userData && !userData._id && userData.id) {
+            userData._id = userData.id;
+          }
+          set({ user: userData });
           return { success: true };
-        } catch (e: any) {
-          return { success: false, message: e.response?.data?.message || 'Login failed' };
+        } catch (error: any) {
+          console.error('Login error:', error);
+          return { 
+            success: false, 
+            message: error.response?.data?.message || 'Login failed' 
+          };
         }
       },
 
       register: async (name, email, password) => {
         try {
-          const res = await api.post('/auth/register', { name, email, password });
-          set({ user: res.data.user });
+          const response = await api.post('/auth/register', { name, email, password });
+          const userData = response.data.user;
+          if (userData && !userData._id && userData.id) {
+            userData._id = userData.id;
+          }
+          set({ user: userData });
           return { success: true };
-        } catch (e: any) {
-          return { success: false, message: e.response?.data?.message || 'Registration failed' };
+        } catch (error: any) {
+          console.error('Registration error:', error);
+          return { 
+            success: false, 
+            message: error.response?.data?.message || 'Registration failed' 
+          };
         }
       },
 
       logout: async () => {
         try {
           await api.post('/auth/logout');
-        } catch (e) { /* ignore */ }
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
         set({ user: null });
       },
 
       checkAuth: async () => {
         try {
-          const res = await api.get('/auth/me');
-          set({ user: res.data.user, isLoading: false });
-        } catch {
+          const response = await api.get('/auth/me');
+          console.log('🔍 Auth check response:', response.data);
+          
+          let userData = response.data.user;
+          if (userData && !userData._id && userData.id) {
+            userData._id = userData.id;
+          }
+          
+          set({ 
+            user: userData, 
+            isLoading: false 
+          });
+          return { success: true };
+        } catch (error) {
+          console.error('Auth check error:', error);
           set({ user: null, isLoading: false });
+          return { success: false };
         }
+      },
+
+      setUser: (user) => {
+        if (user && !user._id && user.id) {
+          user._id = user.id;
+        }
+        set({ user });
       },
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ user: state.user }), // Only persist user, never token!
+      partialize: (state) => ({ 
+        user: state.user 
+      }),
     }
   )
 );
 
-// Handle global 401 events
-window.addEventListener('auth:unauthorized', () => {
-  useAuthStore.setState({ user: null });
-});
+// Listen for global 401 events to auto-logout
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth:unauthorized', () => {
+    useAuthStore.getState().setUser(null);
+  });
+}

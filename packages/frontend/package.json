@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
+    "@monaco-editor/react": "^4.7.0",
     "@nexlab/shared": "*",
     "axios": "^1.6.2",
     "lucide-react": "^1.39.0",
