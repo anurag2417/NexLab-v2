@@ -67,6 +67,11 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // 5. Start Server
 await connectDB();
+
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'NexLab Backend API is running!' });
+});
+
 app.listen(env.PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${env.PORT}`);
 });

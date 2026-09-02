@@ -7,25 +7,19 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://nexlab-v2.onrender.com',
         changeOrigin: true,
-        secure: false,
-        ws: true,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('🔀 Proxying:', req.method, req.url);
-            // Forward the cookie header
-            if (req.headers.cookie) {
-              proxyReq.setHeader('Cookie', req.headers.cookie);
-              console.log('🍪 Forwarding cookie:', req.headers.cookie);
-            }
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('🔀 Response from target:', proxyRes.statusCode, req.url);
-          });
+        secure: true,
+      },
+    },
+  },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
         },
       },
     },
