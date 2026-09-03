@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Loader2, CheckCircle, XCircle, 
-  ChevronDown, ChevronUp, Lightbulb
+  ChevronDown, ChevronUp, Lightbulb, Award
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -41,6 +41,7 @@ export const ProblemDetail: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [showHints, setShowHints] = useState(false);
+  const [isSolved, setIsSolved] = useState(false);
 
   useEffect(() => {
     if (slug) fetchProblem();
@@ -53,6 +54,7 @@ export const ProblemDetail: React.FC = () => {
       const data = response.data.data;
       setProblem(data.problem);
       setCode(data.problem.starterCode || '// Write your solution here');
+      setIsSolved(data.isSolved || false);
     } catch (error) {
       console.error('Error fetching problem:', error);
       navigate('/problems');
@@ -72,7 +74,11 @@ export const ProblemDetail: React.FC = () => {
 
     try {
       const response = await api.post(`/problems/${slug}/submit`, { code });
-      setResult(response.data.data);
+      const data = response.data.data;
+      setResult(data);
+      if (data.isSolved) {
+        setIsSolved(true);
+      }
     } catch (error: any) {
       setResult({
         status: 'runtime_error',
@@ -99,12 +105,14 @@ export const ProblemDetail: React.FC = () => {
 
     try {
       const response = await api.post(`/problems/${slug}/submit`, { code });
-      setResult(response.data.data);
+      const data = response.data.data;
+      setResult(data);
       
-      if (response.data.data.status === 'accepted') {
+      if (data.isSolved) {
+        setIsSolved(true);
         alert('🎉 All test cases passed! Great job!');
       } else {
-        alert(`❌ ${response.data.data.status.replace('_', ' ').toUpperCase()}`);
+        alert(`❌ ${data.status.replace('_', ' ').toUpperCase()}`);
       }
     } catch (error: any) {
       setResult({
@@ -166,15 +174,19 @@ export const ProblemDetail: React.FC = () => {
           <button onClick={() => navigate('/problems')} className="text-[#9CA3A0] hover:text-[#EDEFEE] transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
+          <div className="flex items-center gap-3">
             <h1 className="text-lg font-bold text-[#EDEFEE]">{problem.title}</h1>
-            <div className="flex items-center gap-2 text-xs">
-              <span className={`px-2 py-0.5 rounded-full ${getDifficultyColor(problem.difficulty)}`}>
-                {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
+            {isSolved && (
+              <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30">
+                <Award className="w-3 h-3" />
+                Solved ✅
               </span>
-              <span className="text-[#5C6360]">•</span>
-              <span className="text-[#5C6360]">{problem.tags?.join(', ') || 'General'}</span>
-            </div>
+            )}
+            <span className={`px-2 py-0.5 rounded-full text-xs ${getDifficultyColor(problem.difficulty)}`}>
+              {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
+            </span>
+            <span className="text-[#5C6360] text-xs">•</span>
+            <span className="text-[#5C6360] text-xs">{problem.tags?.join(', ') || 'General'}</span>
           </div>
         </div>
       </div>

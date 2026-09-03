@@ -14,6 +14,7 @@ export class ProblemService {
   // ---------- Problem CRUD ----------
   
   static async createProblem(data: Partial<IProblem>): Promise<IProblem> {
+    // Ensure starterCode is set
     if (!data.starterCode || data.starterCode.trim() === '') {
       const functionName = data.title
         ? data.title
@@ -35,7 +36,10 @@ export class ProblemService {
   }
 
   static async getProblemBySlug(slug: string): Promise<IProblem | null> {
-    const problem = await Problem.findOne({ slug, isPublished: true }).populate('createdBy', 'name').lean();
+    const problem = await Problem.findOne({ slug, isPublished: true })
+      .populate('createdBy', 'name')
+      .populate('solvedBy', 'name email')
+      .lean();
     return problem as IProblem | null;
   }
 
@@ -64,7 +68,7 @@ export class ProblemService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select('title slug difficulty tags createdAt isPublished')
+        .select('title slug difficulty tags createdAt isPublished solvedBy')
         .lean(),
       Problem.countDocuments(query),
     ]);
@@ -106,6 +110,7 @@ export class ProblemService {
     let runtime = 0;
     let memory = 0;
 
+    // Run each test case
     for (const testCase of testCases) {
       try {
         const result = await this.executeJavaScript(
@@ -140,6 +145,24 @@ export class ProblemService {
       }
     }
 
+    // If accepted, mark problem as solved by this user
+    if (status === 'accepted') {
+      // Check if user already solved this problem
+      const alreadySolved = problem.solvedBy?.some(
+        (id) => id.toString() === userId
+      );
+      
+      if (!alreadySolved) {
+        if (!problem.solvedBy) {
+          problem.solvedBy = [];
+        }
+        problem.solvedBy.push(new Types.ObjectId(userId));
+        await problem.save();
+        console.log(`✅ Problem ${problem.title} marked as solved by user ${userId}`);
+      }
+    }
+
+    // Save submission
     const submission = await ProblemSubmission.create({
       problemId: new Types.ObjectId(problemId),
       userId: new Types.ObjectId(userId),
@@ -153,6 +176,7 @@ export class ProblemService {
       submittedAt: new Date(),
     });
 
+    // Award XP if accepted
     if (status === 'accepted') {
       const xpGain = this.getXpForDifficulty(problem.difficulty);
       const user = await User.findById(userId);
@@ -175,6 +199,7 @@ export class ProblemService {
       runtime: Math.round(runtime / Math.max(testCases.length, 1)),
       memory,
       errorMessage,
+      isSolved: status === 'accepted',
     };
   }
 
@@ -192,6 +217,8 @@ export class ProblemService {
 
     const finalCode = this.wrapWithTestRunner(code, input);
     await fs.writeFile(filePath, finalCode, 'utf-8');
+
+    console.log(`📄 Created temp file: ${filePath}`);
 
     const startTime = Date.now();
     let output = '';
@@ -235,7 +262,6 @@ export class ProblemService {
 
   // ---------- Wrap Code with Test Runner ----------
   static wrapWithTestRunner(code: string, input: string): string {
-    // Parse input
     const lines = input.split('\n').filter(s => s.trim());
     const args = lines.map(s => s.trim());
     

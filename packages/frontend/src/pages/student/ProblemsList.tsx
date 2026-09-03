@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Code2 } from 'lucide-react';
+import { Search, Code2, CheckCircle, XCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Problem {
   _id: string;
@@ -12,13 +13,15 @@ interface Problem {
   tags: string[];
   createdAt: string;
   isPublished: boolean;
+  solvedBy?: string[];
 }
 
 export const ProblemsList: React.FC = () => {
+  const { user } = useAuthStore();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<string>('');
+  const [difficultyFilter, setDifficultyFilter] = useState('');
 
   useEffect(() => {
     fetchProblems();
@@ -36,6 +39,11 @@ export const ProblemsList: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const isProblemSolved = (problem: Problem): boolean => {
+    if (!user) return false;
+    return problem.solvedBy?.some(id => id === user._id) || false;
   };
 
   const getDifficultyBadge = (difficulty: string) => {
@@ -120,40 +128,77 @@ export const ProblemsList: React.FC = () => {
                   <th className="text-left py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
                     Tags
                   </th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
+                    Status
+                  </th>
                   <th className="text-right py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
                     Action
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {problems.map((problem) => (
-                  <tr key={problem._id} className="border-b border-[#2A302E] hover:bg-[#1E2322] transition-colors">
-                    <td className="py-3 px-4">
-                      <Link to={`/problems/${problem.slug}`} className="text-[#EDEFEE] hover:text-[#10B981] transition-colors font-medium">
-                        {problem.title}
-                      </Link>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getDifficultyBadge(problem.difficulty)}`}>
-                        {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-1">
-                        {problem.tags?.slice(0, 3).map((tag, index) => (
-                          <span key={index} className="text-xs px-2 py-0.5 rounded bg-[#2A302E] text-[#5C6360]">
-                            {tag}
+                {problems.map((problem) => {
+                  const isSolved = isProblemSolved(problem);
+                  
+                  return (
+                    <tr key={problem._id} className="border-b border-[#2A302E] hover:bg-[#1E2322] transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          {isSolved && (
+                            <CheckCircle className="w-4 h-4 text-[#10B981]" />
+                          )}
+                          <Link
+                            to={`/problems/${problem.slug}`}
+                            className={`font-medium transition-colors ${
+                              isSolved 
+                                ? 'text-[#10B981] hover:text-[#34D399]' 
+                                : 'text-[#EDEFEE] hover:text-[#10B981]'
+                            }`}
+                          >
+                            {problem.title}
+                          </Link>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getDifficultyBadge(problem.difficulty)}`}>
+                          {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap gap-1">
+                          {problem.tags?.slice(0, 3).map((tag, index) => (
+                            <span key={index} className="text-xs px-2 py-0.5 rounded bg-[#2A302E] text-[#5C6360]">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {isSolved ? (
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-[#10B981]/20 text-[#10B981] flex items-center justify-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Solved
                           </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <Link to={`/problems/${problem.slug}`}>
-                        <Button variant="primary" size="sm">Solve</Button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                        ) : (
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-[#2A302E] text-[#5C6360] flex items-center justify-center gap-1">
+                            <XCircle className="w-3 h-3" />
+                            Unsolved
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Link to={`/problems/${problem.slug}`}>
+                          <Button 
+                            variant={isSolved ? 'secondary' : 'primary'} 
+                            size="sm"
+                          >
+                            {isSolved ? 'Review' : 'Solve'}
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

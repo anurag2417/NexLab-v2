@@ -19,13 +19,14 @@ export interface IProblem extends Document {
   }[];
   constraints: string[];
   testCases: ITestCase[];
-  starterCode: string; // JavaScript starter code
-  solutionCode: string; // JavaScript solution
+  starterCode: string;
+  solutionCode: string;
   hints: string[];
   tags: string[];
   timeLimit: number;
   memoryLimit: number;
   isPublished: boolean;
+  solvedBy: Types.ObjectId[]; // ✅ New field: users who solved this problem
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -77,6 +78,7 @@ const ProblemSchema = new Schema<IProblem>(
     timeLimit: { type: Number, default: 2000 },
     memoryLimit: { type: Number, default: 256 },
     isPublished: { type: Boolean, default: false },
+    solvedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }], // ✅ New field
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

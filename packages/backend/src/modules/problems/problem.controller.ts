@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { Types } from 'mongoose';
 import { ProblemService } from './problem.service.js';
-import { Problem } from './problem.model.js'; // ✅ Add this import
+import { Problem } from './problem.model.js';
 
 // Validation schemas
 const createProblemSchema = z.object({
@@ -37,17 +37,16 @@ export class ProblemController {
   static async create(req: Request, res: Response) {
     try {
       const data = createProblemSchema.parse(req.body);
-
+      
       // Ensure starterCode is set
       if (!data.starterCode || data.starterCode.trim() === '') {
         const functionName = data.title
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '_')
           .replace(/^_+|_+$/g, '');
-
         data.starterCode = `function ${functionName}() {\n  // Write your solution here\n  // Return the result\n  return 0;\n}`;
       }
-
+      
       const problem = await ProblemService.createProblem({
         ...data,
         createdBy: new Types.ObjectId(req.userId),
@@ -122,13 +121,13 @@ export class ProblemController {
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
       const [problems, total] = await Promise.all([
-        Problem.find(query) // ✅ Use Problem model directly
+        Problem.find(query)
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit as string))
           .populate('createdBy', 'name')
           .lean(),
-        Problem.countDocuments(query), // ✅ Use Problem model directly
+        Problem.countDocuments(query),
       ]);
 
       res.status(200).json({
@@ -155,7 +154,7 @@ export class ProblemController {
     try {
       const { slug } = req.params;
       const problem = await ProblemService.getProblemBySlug(slug);
-
+      
       if (!problem) {
         return res.status(404).json({
           success: false,
@@ -164,8 +163,15 @@ export class ProblemController {
       }
 
       let userSubmissions = [];
+      let isSolved = false;
+      
       if (req.userId) {
         userSubmissions = await ProblemService.getUserSubmissions(req.userId, problem._id.toString());
+        
+        // Check if user has solved this problem
+        isSolved = problem.solvedBy?.some(
+          (id) => id.toString() === req.userId
+        ) || false;
       }
 
       const stats = await ProblemService.getProblemStats(problem._id.toString());
@@ -176,6 +182,7 @@ export class ProblemController {
           problem,
           userSubmissions,
           stats,
+          isSolved,
         },
       });
     } catch (error: any) {
@@ -192,7 +199,7 @@ export class ProblemController {
     try {
       const { problemId } = req.params;
       const problem = await ProblemService.getProblemById(problemId);
-
+      
       if (!problem) {
         return res.status(404).json({
           success: false,
@@ -258,7 +265,7 @@ export class ProblemController {
     try {
       const { problemId } = req.params;
       const data = createProblemSchema.partial().parse(req.body);
-
+      
       const problem = await ProblemService.updateProblem(problemId, data);
       if (!problem) {
         return res.status(404).json({
@@ -292,7 +299,7 @@ export class ProblemController {
     try {
       const { problemId } = req.params;
       const deleted = await ProblemService.deleteProblem(problemId);
-
+      
       if (!deleted) {
         return res.status(404).json({
           success: false,
