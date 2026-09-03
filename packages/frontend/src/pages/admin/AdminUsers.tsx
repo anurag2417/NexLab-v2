@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+//import { useNavigate } from 'react-router-dom';
 import { 
-  Users, Search, Filter, ChevronLeft, ChevronRight,
-  Edit2, Trash2, Eye, Award, BookOpen, TrendingUp,
-  UserPlus, Mail, Calendar, Shield
+  Users, Search, ChevronLeft, ChevronRight,
+  Edit2, Trash2, Eye
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';

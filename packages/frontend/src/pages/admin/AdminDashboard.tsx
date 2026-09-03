@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, GraduationCap, BookOpen, TrendingUp, DollarSign, Eye } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Eye } from 'lucide-react';
 import { StatCard } from '../../components/ui/StatCard';
 import { Button } from '../../components/ui/Button';
 import { api } from '../../lib/api';

@@ -23,7 +23,7 @@ interface CourseProgress {
 }
 
 export const StudentDashboard: React.FC = () => {
-  const { user, checkAuth } = useAuthStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
   const [progressMap, setProgressMap] = useState<Record<string, CourseProgress>>({});

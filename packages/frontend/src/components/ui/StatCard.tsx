@@ -8,12 +8,12 @@ interface StatCardProps {
 }
 
 export const StatCard: React.FC<StatCardProps> = ({ title, value, icon = 'emerald' }) => {
-  const colorMap = {
-    emerald: 'bg-[#10B981]',
-    info: 'bg-[#60A5FA]',
-    warning: 'bg-[#FBBF24]',
-    error: 'bg-[#F87171]',
-  };
+  // const colorMap = {
+  //   emerald: 'bg-[#10B981]',
+  //   info: 'bg-[#60A5FA]',
+  //   warning: 'bg-[#FBBF24]',
+  //   error: 'bg-[#F87171]',
+  // };
 
   return (
     <div className="bg-[#161A19] rounded-xl border border-[#2A302E] p-6 shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-all duration-300">

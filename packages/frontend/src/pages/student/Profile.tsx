@@ -3,10 +3,9 @@ import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { 
-  User, Mail, Award, Zap, BookOpen, 
-  Flame, TrendingUp, Edit2, Save, X,
-  CheckCircle, Clock, Calendar,
-  Shield, Crown, Star
+  Award, Zap, 
+  Flame, Edit2, Save, X,
+  CheckCircle, Crown
 } from 'lucide-react';
 
 interface UserProfile {
@@ -39,7 +38,7 @@ interface CourseProgress {
 }
 
 export const Profile: React.FC = () => {
-  const { user, checkAuth } = useAuthStore();
+  const { checkAuth } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [courseProgress, setCourseProgress] = useState<CourseProgress[]>([]);

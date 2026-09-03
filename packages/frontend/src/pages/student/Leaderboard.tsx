@@ -4,7 +4,7 @@ import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { 
   Crown, Medal, Trophy, Star, 
-  TrendingUp, Users, Award, 
+  TrendingUp, Users, 
   ChevronLeft, ChevronRight 
 } from 'lucide-react';
 

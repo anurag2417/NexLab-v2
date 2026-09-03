@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Users, BookOpen, DollarSign, 
-  Award, Calendar, BarChart3, PieChart,
-  Download, RefreshCw, Eye, Clock,
-  GraduationCap, Zap, Star, Target
+  BarChart3, RefreshCw,
+  GraduationCap
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
