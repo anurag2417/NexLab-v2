@@ -31,7 +31,7 @@ export const CourseForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!!id);
 
-  const { register, control, handleSubmit, formState: { errors }, reset, setValue } = useForm<CourseFormData>({
+  const { register, control, handleSubmit, formState: { errors }, reset } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
       title: '',
@@ -82,9 +82,9 @@ export const CourseForm: React.FC = () => {
         await api.post('/courses', data);
       }
       navigate('/admin/courses');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving course:', error);
-      alert('Failed to save course. Please try again.');
+      alert(error.response?.data?.message || 'Failed to save course. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -93,7 +93,7 @@ export const CourseForm: React.FC = () => {
   if (fetching) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent" />
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#10B981] border-t-transparent" />
       </div>
     );
   }
@@ -104,107 +104,108 @@ export const CourseForm: React.FC = () => {
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => navigate('/admin/courses')}
-          className="p-2 hover:bg-background-muted rounded-lg transition-colors"
+          className="p-2 hover:bg-[#1E2322] rounded-lg transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 text-text-body" />
+          <ArrowLeft className="w-5 h-5 text-[#9CA3A0]" />
         </button>
-        <h1 className="text-2xl font-bold text-text-heading">
+        <h1 className="text-2xl font-bold text-[#EDEFEE]">
           {id ? 'Edit Course' : 'Create New Course'}
         </h1>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Basic Info */}
-        <div className="bg-background-light border border-border rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-text-heading mb-4">Basic Information</h2>
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Basic Information</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-body mb-1">
+              <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
                 Title *
               </label>
               <input
                 {...register('title')}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
                 placeholder="e.g., React Mastery 2025"
               />
               {errors.title && (
-                <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>
+                <p className="text-[#F87171] text-xs mt-1">{errors.title.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-body mb-1">
+              <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
                 Category *
               </label>
               <input
                 {...register('category')}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
                 placeholder="e.g., Programming, Design"
               />
               {errors.category && (
-                <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>
+                <p className="text-[#F87171] text-xs mt-1">{errors.category.message}</p>
               )}
             </div>
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-text-body mb-1">
+            <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
               Description *
             </label>
             <textarea
               {...register('description')}
               rows={4}
-              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
               placeholder="Describe what students will learn..."
             />
             {errors.description && (
-              <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>
+              <p className="text-[#F87171] text-xs mt-1">{errors.description.message}</p>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-sm font-medium text-text-body mb-1">
+              <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
                 Level *
               </label>
               <select
                 {...register('level')}
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] transition-all duration-200"
               >
                 <option value="beginner">Beginner</option>
                 <option value="intermediate">Intermediate</option>
                 <option value="advanced">Advanced</option>
               </select>
               {errors.level && (
-                <p className="text-red-500 text-xs mt-1">{errors.level.message}</p>
+                <p className="text-[#F87171] text-xs mt-1">{errors.level.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-body mb-1">
+              <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
                 Price ($) *
               </label>
               <input
                 {...register('price', { valueAsNumber: true })}
                 type="number"
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="0"
+                step="0.01"
+                className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
+                placeholder="0.00"
               />
               {errors.price && (
-                <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>
+                <p className="text-[#F87171] text-xs mt-1">{errors.price.message}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Lessons */}
-        <div className="bg-background-light border border-border rounded-xl p-6">
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-text-heading">Lessons</h2>
+            <h2 className="text-lg font-semibold text-[#EDEFEE]">Lessons</h2>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => append({ title: '', videoUrl: '', order: fields.length + 1, isFree: false })}
               className="gap-1"
@@ -215,34 +216,34 @@ export const CourseForm: React.FC = () => {
           </div>
 
           {fields.map((field, index) => (
-            <div key={field.id} className="border border-border rounded-lg p-4 mb-4 relative">
+            <div key={field.id} className="bg-[#0D0F0F] border border-[#2A302E] rounded-lg p-4 mb-4 relative">
               <button
                 type="button"
                 onClick={() => remove(index)}
-                className="absolute top-2 right-2 p-1 text-text-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="absolute top-2 right-2 p-1 text-[#5C6360] hover:text-[#F87171] hover:bg-[#F87171]/10 rounded-lg transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-body mb-1">
+                  <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
                     Lesson Title *
                   </label>
                   <input
                     {...register(`lessons.${index}.title`)}
-                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
                     placeholder="Lesson title"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-text-body mb-1">
+                  <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
                     Video URL *
                   </label>
                   <input
                     {...register(`lessons.${index}.videoUrl`)}
-                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
                     placeholder="https://youtube.com/..."
                   />
                 </div>
@@ -250,35 +251,35 @@ export const CourseForm: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-body mb-1">
+                  <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
                     Duration (minutes)
                   </label>
                   <input
                     {...register(`lessons.${index}.duration`, { valueAsNumber: true })}
                     type="number"
-                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
                     placeholder="10"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-text-body mb-1">
+                  <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
                     Order *
                   </label>
                   <input
                     {...register(`lessons.${index}.order`, { valueAsNumber: true })}
                     type="number"
-                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
                     placeholder="1"
                   />
                 </div>
 
                 <div className="flex items-center mt-6">
-                  <label className="flex items-center gap-2 text-sm text-text-body">
+                  <label className="flex items-center gap-2 text-sm text-[#9CA3A0]">
                     <input
                       {...register(`lessons.${index}.isFree`)}
                       type="checkbox"
-                      className="w-4 h-4 text-primary-600 border-border rounded focus:ring-primary-500"
+                      className="w-4 h-4 text-[#10B981] border-[#2A302E] rounded focus:ring-[#10B981] bg-[#0D0F0F]"
                     />
                     Free Lesson
                   </label>
@@ -288,7 +289,7 @@ export const CourseForm: React.FC = () => {
           ))}
 
           {fields.length === 0 && (
-            <p className="text-text-muted text-sm text-center py-4">
+            <p className="text-[#5C6360] text-sm text-center py-4">
               No lessons yet. Click "Add Lesson" to get started.
             </p>
           )}
@@ -298,7 +299,7 @@ export const CourseForm: React.FC = () => {
         <div className="flex gap-4">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={() => navigate('/admin/courses')}
           >
             Cancel

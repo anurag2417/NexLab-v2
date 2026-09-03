@@ -54,15 +54,33 @@ export class CourseController {
     }
   }
 
-  // ---------- Get All Courses ----------
-  static async getAll(req: Request, res: Response) {
+  // ---------- Get All Courses (Admin) ----------
+  static async getAllAdmin(req: Request, res: Response) {
     try {
-      const { category, level, isPublished, search } = req.query;
+      const courses = await CourseService.getAllCourses();
+      res.status(200).json({
+        success: true,
+        data: courses,
+        count: courses.length,
+      });
+    } catch (error: any) {
+      console.error('Get admin courses error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to fetch courses',
+      });
+    }
+  }
+
+  // ---------- Get All Published Courses (Student) ----------
+  static async getAllPublished(req: Request, res: Response) {
+    try {
+      const { category, level, search } = req.query;
       
       const courses = await CourseService.getCourses({
         category: category as string,
         level: level as string,
-        isPublished: isPublished === 'true' ? true : isPublished === 'false' ? false : undefined,
+        isPublished: true,
         search: search as string,
       });
 
@@ -72,7 +90,7 @@ export class CourseController {
         count: courses.length,
       });
     } catch (error: any) {
-      console.error('Get courses error:', error);
+      console.error('Get published courses error:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to fetch courses',
@@ -193,34 +211,12 @@ export class CourseController {
     }
   }
 
-  // ---------- Get Popular Courses ----------
-  static async getPopular(req: Request, res: Response) {
-    try {
-      const limit = parseInt(req.query.limit as string) || 5;
-      const courses = await CourseService.getPopularCourses(limit);
-      
-      res.status(200).json({
-        success: true,
-        data: courses,
-      });
-    } catch (error: any) {
-      console.error('Get popular courses error:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch popular courses',
-      });
-    }
-  }
-
   // ---------- Enroll Student in Course ----------
   static async enroll(req: Request, res: Response) {
-    const { courseId } = req.params;
-    const userId = req.userId;
-
-    console.log(`📚 Enrolling user ${userId} in course ${courseId}`);
-
     try {
-      // 1. Check if course exists and is published
+      const { courseId } = req.params;
+      const userId = req.userId;
+
       const course = await CourseService.getCourseById(courseId);
       if (!course) {
         return res.status(404).json({
@@ -236,7 +232,6 @@ export class CourseController {
         });
       }
 
-      // 2. Get user
       const user = await User.findById(userId);
       if (!user) {
         return res.status(404).json({
@@ -245,7 +240,6 @@ export class CourseController {
         });
       }
 
-      // 3. Check if already enrolled
       const alreadyEnrolled = user.enrolledCourses?.some(id => id.toString() === courseId);
       if (alreadyEnrolled) {
         return res.status(400).json({
@@ -254,36 +248,26 @@ export class CourseController {
         });
       }
 
-      // 4. Add course to user's enrolledCourses
       if (!user.enrolledCourses) {
         user.enrolledCourses = [];
       }
       user.enrolledCourses.push(new Types.ObjectId(courseId));
       await user.save();
 
-      // 5. Add user to course's enrolledStudents
-      if (!course.enrolledStudents) {
-        course.enrolledStudents = [];
+      const success = await CourseService.enrollStudent(courseId, userId);
+      if (!success) {
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to enroll in course',
+        });
       }
-      const alreadyInCourse = course.enrolledStudents.some(id => id.toString() === userId);
-      if (!alreadyInCourse) {
-        course.enrolledStudents.push(new Types.ObjectId(userId));
-        await course.save();
-      }
-
-      console.log(`✅ User ${userId} enrolled in course ${courseId}`);
 
       res.status(200).json({
         success: true,
         message: 'Successfully enrolled in course',
-        data: {
-          courseId: course._id,
-          userId: user._id,
-          enrolledStudents: course.enrolledStudents.length,
-        },
       });
     } catch (error: any) {
-      console.error('❌ Enrollment error:', error);
+      console.error('Enrollment error:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to enroll in course',

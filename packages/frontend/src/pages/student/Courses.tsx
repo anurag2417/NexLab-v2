@@ -14,6 +14,7 @@ interface Course {
   enrolledStudents: string[];
   isPublished: boolean;
   price: number;
+  instructor?: { name: string };
 }
 
 export const StudentCourses: React.FC = () => {
@@ -31,7 +32,9 @@ export const StudentCourses: React.FC = () => {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/courses?isPublished=true');
+      // ✅ Use the published endpoint
+      const response = await api.get('/courses/published');
+      console.log('📚 Published courses:', response.data);
       setCourses(response.data.data || []);
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -56,7 +59,7 @@ export const StudentCourses: React.FC = () => {
 
   const isUserEnrolled = (course: Course): boolean => {
     const userId = user?._id || user?.id;
-    return (userId ? course.enrolledStudents?.includes(userId) : false) || 
+    return (!!userId && course.enrolledStudents?.includes(userId)) || 
            user?.enrolledCourses?.includes(course._id) || false;
   };
 
@@ -69,7 +72,7 @@ export const StudentCourses: React.FC = () => {
     return colors[level] || 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20';
   };
 
-  const filteredCourses = courses.filter(c => 
+  const filteredCourses = courses.filter(c =>
     c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -89,6 +92,14 @@ export const StudentCourses: React.FC = () => {
           <h1 className="text-2xl font-bold text-[#EDEFEE]">Available Courses</h1>
           <p className="text-[#9CA3A0] mt-1">Expand your skills with our curated content</p>
         </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={fetchCourses}
+          className="gap-1"
+        >
+          🔄 Refresh
+        </Button>
       </div>
 
       {/* Search Bar */}
@@ -108,7 +119,8 @@ export const StudentCourses: React.FC = () => {
       {filteredCourses.length === 0 ? (
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-12 text-center">
           <BookOpen className="w-12 h-12 text-[#10B981] mx-auto mb-4 opacity-40" />
-          <p className="text-[#9CA3A0]">No courses found</p>
+          <p className="text-[#9CA3A0]">No courses available yet. Check back soon!</p>
+          <p className="text-[#5C6360] text-sm mt-2">Make sure courses are published in the admin panel.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

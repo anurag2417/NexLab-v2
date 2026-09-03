@@ -5,17 +5,17 @@ import { isAdmin } from '../../shared/middleware/admin.middleware.js';
 
 const router = express.Router();
 
-// --- Public Routes (No Auth Required) ---
-// Get all courses (with filters)
-router.get('/', CourseController.getAll);
+// ---------- Public Routes (Student) ----------
+// Get all published courses
+router.get('/published', CourseController.getAllPublished);
 
 // Get popular courses
-router.get('/popular', CourseController.getPopular);
+router.get('/popular', CourseController.getAllPublished);
 
 // Get single course by ID
 router.get('/:id', CourseController.getOne);
 
-// --- Protected Routes (Student - Auth Required) ---
+// ---------- Protected Routes (Student - Auth Required) ----------
 // Enroll in a course
 router.post('/:courseId/enroll', authenticate, CourseController.enroll);
 
@@ -25,7 +25,10 @@ router.get('/:courseId/progress', authenticate, CourseController.getProgress);
 // Mark lesson as complete
 router.post('/:courseId/:lessonId/complete', authenticate, CourseController.completeLesson);
 
-// --- Admin Only Routes ---
+// ---------- Admin Only Routes ----------
+// Get all courses (admin view)
+router.get('/admin/all', authenticate, isAdmin, CourseController.getAllAdmin);
+
 // Create a new course
 router.post('/', authenticate, isAdmin, CourseController.create);
 

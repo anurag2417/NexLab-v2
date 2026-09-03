@@ -33,9 +33,14 @@ export class CourseService {
       ];
     }
 
-    console.log('Course query:', query);
-
     return await Course.find(query)
+      .populate('instructor', 'name email')
+      .sort({ createdAt: -1 });
+  }
+
+  // Get all courses for admin (no filters)
+  static async getAllCourses(): Promise<ICourse[]> {
+    return await Course.find()
       .populate('instructor', 'name email')
       .sort({ createdAt: -1 });
   }
@@ -86,15 +91,13 @@ export class CourseService {
       
       const userIdObj = new Types.ObjectId(userId);
       
-      // Check if already enrolled
       if (course.enrolledStudents.some(id => id.toString() === userId)) {
-        return false; // Already enrolled
+        return false;
       }
       
       course.enrolledStudents.push(userIdObj);
       await course.save();
       
-      console.log(`✅ Student ${userId} enrolled in course ${courseId}`);
       return true;
     } catch (error) {
       console.error('Error enrolling student:', error);

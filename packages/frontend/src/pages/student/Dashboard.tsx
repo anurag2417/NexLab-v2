@@ -23,7 +23,7 @@ interface CourseProgress {
 }
 
 export const StudentDashboard: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, checkAuth } = useAuthStore();
   const navigate = useNavigate();
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
   const [progressMap, setProgressMap] = useState<Record<string, CourseProgress>>({});
@@ -37,20 +37,41 @@ export const StudentDashboard: React.FC = () => {
     setLoading(true);
     try {
       const userId = user?._id || user?.id;
-      const response = await api.get('/courses?isPublished=true');
+      
+      // Fetch published courses only
+      const response = await api.get('/courses/published');
       const allCourses = response.data.data || [];
       
-      const enrolled = allCourses.filter((c: any) => 
-        c.enrolledStudents?.includes(userId) || user?.enrolledCourses?.includes(c._id)
-      );
+      console.log('📚 All published courses:', allCourses);
+      console.log('👤 User ID:', userId);
+      console.log('📋 User enrolledCourses:', user?.enrolledCourses);
+
+      // Filter courses the user is enrolled in
+      const enrolled = allCourses.filter((c: any) => {
+        const isInEnrolledStudents = c.enrolledStudents?.includes(userId);
+        const isInUserEnrolled = user?.enrolledCourses?.includes(c._id);
+        const isEnrolled = isInEnrolledStudents || isInUserEnrolled;
+        
+        console.log(`📚 Course: ${c.title}`, {
+          isInEnrolledStudents,
+          isInUserEnrolled,
+          isEnrolled,
+        });
+        
+        return isEnrolled;
+      });
+      
+      console.log('✅ Enrolled courses:', enrolled);
       setEnrolledCourses(enrolled);
 
+      // Fetch progress for each enrolled course
       const progressData: Record<string, CourseProgress> = {};
       for (const course of enrolled) {
         try {
           const progressRes = await api.get(`/courses/${course._id}/progress`);
           progressData[course._id] = progressRes.data.data;
         } catch (e) {
+          console.error(`Error fetching progress for ${course._id}:`, e);
           progressData[course._id] = {
             completedLessons: 0,
             totalLessons: course.lessons?.length || 0,

@@ -63,7 +63,7 @@ const CourseSchema = new Schema<ICourse>(
   { timestamps: true }
 );
 
-// Auto-generate slug from title (if not provided)
+// Auto-generate slug from title
 CourseSchema.pre('save', function(next) {
   if (this.isModified('title') || !this.slug) {
     this.slug = this.title

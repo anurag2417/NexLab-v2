@@ -18,25 +18,24 @@ import { Leaderboard } from './pages/student/Leaderboard';
 import { Profile } from './pages/student/Profile';
 import { CoursePlayer } from './pages/student/CoursePlayer';
 
-// Admin Pages (placeholders - we'll build these next)
-const AdminDashboard: React.FC = () => <div className="py-8">Admin Dashboard - Coming soon</div>;
-//const AdminCourses: React.FC = () => <div className="py-8">Admin Courses - Coming soon</div>;
-const AdminUsers: React.FC = () => <div className="py-8">Admin Users - Coming soon</div>;
-const AdminAnalytics: React.FC = () => <div className="py-8">Admin Analytics - Coming soon</div>;
+// Admin Pages
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminCourses } from './pages/admin/AdminCourses';
 import { CourseForm } from './pages/admin/CourseForm';
-import { AdminCourses } from './pages/admin/Courses';
+import { AdminUsers } from './pages/admin/AdminUsers';
+import { AdminAnalytics } from './pages/admin/AdminAnalytics';
 
 // Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({
-  children,
-  adminOnly
+const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ 
+  children, 
+  adminOnly 
 }) => {
   const { user, isLoading } = useAuthStore();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center bg-[#0D0F0F]">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#10B981] border-t-transparent" />
       </div>
     );
   }
@@ -69,17 +68,17 @@ function App() {
           <Route path="/sandbox" element={<Sandbox />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="course/:courseId" element={<CoursePlayer />} />
+          <Route path="/course/:courseId" element={<CoursePlayer />} />
         </Route>
 
         {/* Protected Admin Routes */}
         <Route element={<ProtectedRoute adminOnly><RootLayout /></ProtectedRoute>}>
-          <Route path="admin/dashboard" element={<AdminDashboard />} />
-          <Route path="admin/courses" element={<AdminCourses />} />        // ← THIS must exist
-          <Route path="admin/courses/create" element={<CourseForm />} />   // ← THIS must exist
-          <Route path="admin/courses/edit/:id" element={<CourseForm />} /> // ← THIS must exist
-          <Route path="admin/users" element={<AdminUsers />} />
-          <Route path="admin/analytics" element={<AdminAnalytics />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/courses" element={<AdminCourses />} />
+          <Route path="/admin/courses/create" element={<CourseForm />} />
+          <Route path="/admin/courses/edit/:id" element={<CourseForm />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/analytics" element={<AdminAnalytics />} />
         </Route>
 
         {/* Catch All */}
