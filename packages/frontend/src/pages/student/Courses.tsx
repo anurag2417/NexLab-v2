@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Clock, Users, Play, Search } from 'lucide-react';
+import { BookOpen, Clock, Users, Play, Search, Eye, Star } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../stores/authStore';
+import { CoursePreviewModal } from '../../components/CoursePreviewModal';
 
 interface Course {
   _id: string;
@@ -14,7 +15,11 @@ interface Course {
   enrolledStudents: string[];
   isPublished: boolean;
   price: number;
-  instructor?: { name: string };
+  instructor?: { name: string; email: string };
+  category: string;
+  createdAt: string;
+  rating?: number;
+  totalReviews?: number;
 }
 
 export const StudentCourses: React.FC = () => {
@@ -23,6 +28,8 @@ export const StudentCourses: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [enrolling, setEnrolling] = useState<string | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,9 +39,8 @@ export const StudentCourses: React.FC = () => {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      // ✅ Use the published endpoint
       const response = await api.get('/courses/published');
-      //console.log('📚 Published courses:', response.data);
+      console.log('📚 Published courses:', response.data);
       setCourses(response.data.data || []);
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -49,12 +55,18 @@ export const StudentCourses: React.FC = () => {
       await api.post(`/courses/${courseId}/enroll`);
       await checkAuth();
       await fetchCourses();
+      setIsModalOpen(false);
       alert('Successfully enrolled in course! 🎉');
     } catch (error: any) {
       alert(error.response?.data?.message || 'Failed to enroll');
     } finally {
       setEnrolling(null);
     }
+  };
+
+  const handleLearnMore = (course: Course) => {
+    setSelectedCourse(course);
+    setIsModalOpen(true);
   };
 
   const isUserEnrolled = (course: Course): boolean => {
@@ -87,6 +99,7 @@ export const StudentCourses: React.FC = () => {
 
   return (
     <div className="py-8">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-[#EDEFEE]">Available Courses</h1>
@@ -134,8 +147,14 @@ export const StudentCourses: React.FC = () => {
                 key={course._id}
                 className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-shadow"
               >
-                <div className="h-48 bg-gradient-to-br from-[#10B981]/20 to-[#059669]/10 flex items-center justify-center">
+                <div className="h-48 bg-gradient-to-br from-[#10B981]/20 to-[#059669]/10 flex items-center justify-center relative">
                   <BookOpen className="w-12 h-12 text-[#10B981] opacity-40" />
+                  {course.rating && (
+                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#0D0F0F]/80 px-2 py-1 rounded-lg">
+                      <Star className="w-3 h-3 fill-[#FBBF24] text-[#FBBF24]" />
+                      <span className="text-xs font-medium text-[#EDEFEE]">{course.rating.toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-5">
@@ -160,32 +179,59 @@ export const StudentCourses: React.FC = () => {
                         {lessonCount} lessons
                       </span>
                     </div>
-                    {isEnrolled ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/course/${course._id}`)}
-                        className="gap-1"
-                      >
-                        <Play className="w-3.5 h-3.5" />
-                        Continue
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        onClick={() => handleEnroll(course._id)}
-                        disabled={enrolling === course._id}
-                      >
-                        {enrolling === course._id ? 'Enrolling...' : `Enroll ${course.price > 0 ? `$${course.price}` : 'Free'}`}
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isEnrolled ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/course/${course._id}`)}
+                          className="gap-1"
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                          Continue
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleLearnMore(course)}
+                            className="gap-1"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            Learn More
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={() => handleEnroll(course._id)}
+                            disabled={enrolling === course._id}
+                          >
+                            {enrolling === course._id ? 'Enrolling...' : `Enroll ${course.price > 0 ? `$${course.price}` : 'Free'}`}
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Course Preview Modal */}
+      {selectedCourse && (
+        <CoursePreviewModal
+          course={selectedCourse}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedCourse(null);
+          }}
+          onEnroll={() => handleEnroll(selectedCourse._id)}
+          isEnrolled={isUserEnrolled(selectedCourse)}
+        />
       )}
     </div>
   );
