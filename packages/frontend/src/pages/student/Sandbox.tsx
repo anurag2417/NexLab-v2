@@ -25,7 +25,7 @@ interface ExecutionResult {
 
 export const Sandbox: React.FC = () => {
   const [languages, setLanguages] = useState<Language[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('python');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('javascript'); // ✅ Changed to JavaScript
   const [code, setCode] = useState<string>('');
   const [stdin, setStdin] = useState<string>('');
   const [isExecuting, setIsExecuting] = useState(false);
@@ -56,8 +56,10 @@ export const Sandbox: React.FC = () => {
       const data = response.data.data;
       setLanguages(data);
       if (data.length > 0) {
-        setSelectedLanguage(data[0].id);
-        setCode(data[0].sample);
+        // ✅ Set JavaScript as default when languages load
+        const defaultLang = data.find(l => l.id === 'javascript') || data[0];
+        setSelectedLanguage(defaultLang.id);
+        setCode(defaultLang.sample);
       }
     } catch (error) {
       console.error('Error fetching languages:', error);
@@ -127,9 +129,9 @@ export const Sandbox: React.FC = () => {
   const getLanguageColor = (languageId: string) => {
     const colors: Record<string, string> = {
       python: 'bg-[#10B981]',
-      javascript: 'bg-[#60A5FA]',
-      java: 'bg-[#FBBF24]',
-      cpp: 'bg-[#F87171]',
+      javascript: 'bg-[#FBBF24]',
+      java: 'bg-[#F87171]',
+      cpp: 'bg-[#60A5FA]',
     };
     return colors[languageId] || 'bg-[#10B981]';
   };
@@ -145,7 +147,8 @@ export const Sandbox: React.FC = () => {
   const currentLanguage = languages.find(l => l.id === selectedLanguage);
 
   return (
-    <div className="py-8 max-w-7xl mx-auto">
+    <div className="py-8 max-w-full px-4 md:px-8 lg:px-12">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#EDEFEE]">Code Sandbox</h1>
@@ -201,7 +204,9 @@ export const Sandbox: React.FC = () => {
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Editor Section */}
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-[#2A302E] flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -216,7 +221,7 @@ export const Sandbox: React.FC = () => {
             </div>
           </div>
 
-          <div className="h-[400px] md:h-[500px]">
+          <div className="h-[550px] md:h-[650px]">
             <React.Suspense
               fallback={
                 <div className="flex items-center justify-center h-full">
@@ -231,7 +236,7 @@ export const Sandbox: React.FC = () => {
                 theme="vs-dark"
                 options={{
                   minimap: { enabled: false },
-                  fontSize: 14,
+                  fontSize: 15,
                   lineNumbers: 'on',
                   automaticLayout: true,
                   tabSize: 2,
@@ -245,8 +250,10 @@ export const Sandbox: React.FC = () => {
           </div>
         </div>
 
+        {/* Right Panel */}
         <div className="flex flex-col gap-4">
-          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
+          {/* Standard Input */}
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm flex-1">
             <div className="px-4 py-3 border-b border-[#2A302E]">
               <span className="text-sm font-medium text-[#EDEFEE]">Standard Input (stdin)</span>
             </div>
@@ -254,11 +261,12 @@ export const Sandbox: React.FC = () => {
               value={stdin}
               onChange={(e) => setStdin(e.target.value)}
               placeholder="Enter input for your program..."
-              className="w-full px-4 py-3 bg-[#161A19] text-[#EDEFEE] text-sm font-mono focus:outline-none resize-none h-20 placeholder-[#5C6360]"
+              className="w-full px-4 py-3 bg-[#161A19] text-[#EDEFEE] text-sm font-mono focus:outline-none resize-none h-28"
             />
           </div>
 
-          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm flex-1">
+          {/* Output */}
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm flex-[2]">
             <div className="px-4 py-3 border-b border-[#2A302E] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-[#9CA3A0]" />
@@ -295,7 +303,7 @@ export const Sandbox: React.FC = () => {
               </div>
             </div>
 
-            <div ref={outputRef} className="p-4 h-[180px] overflow-y-auto font-mono text-sm bg-[#0D0F0F]">
+            <div ref={outputRef} className="p-4 h-48 overflow-y-auto font-mono text-sm bg-[#0D0F0F]">
               {!result && (
                 <p className="text-[#5C6360] italic">Run your code to see output here...</p>
               )}
@@ -343,6 +351,7 @@ export const Sandbox: React.FC = () => {
         </div>
       </div>
 
+      {/* Footer */}
       <div className="mt-4 text-xs text-[#5C6360] text-center">
         <kbd className="px-2.5 py-1 bg-[#161A19] border border-[#2A302E] rounded text-xs">⌘ + Enter</kbd>
         {' '}to run code • 4 languages supported • 5 executions per minute

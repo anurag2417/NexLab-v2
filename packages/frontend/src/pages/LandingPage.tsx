@@ -58,14 +58,14 @@ export const LandingPage: React.FC = () => {
 
   const animateStats = () => {
     const targetStats = {
-      students: 12500,
-      courses: 180,
-      lessons: 2450,
-      xpEarned: 1250000,
+      students: 500,
+      courses: 10,
+      lessons: 50,
+      xpEarned: 1250,
     };
 
-    const duration = 2000;
-    const steps = 60;
+    const duration = 1000;
+    const steps = 30;
     const interval = duration / steps;
 
     let currentStep = 0;
