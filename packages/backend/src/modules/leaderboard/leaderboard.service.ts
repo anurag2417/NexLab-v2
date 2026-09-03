@@ -7,29 +7,31 @@ export class LeaderboardService {
 
   // Update a user's score in the leaderboard
   static async updateUserScore(userId: string, xp: number): Promise<void> {
-    if (!redisClient.isReady) {
-      console.warn('⚠️ Redis not available - leaderboard update skipped');
-      return;
-    }
-
     try {
+      // Check if Redis is available
+      if (!redisClient || !redisClient.isReady) {
+        console.warn('⚠️ Redis not available - leaderboard update skipped');
+        return;
+      }
+
       await redisClient.zAdd(this.LEADERBOARD_KEY, {
         score: xp,
         value: userId,
       });
     } catch (error) {
-      console.error('Error updating leaderboard:', error);
+      // Silently fail - don't throw error
+      console.warn('⚠️ Leaderboard update failed:', error);
     }
   }
 
   // Get top users from leaderboard
   static async getTopUsers(limit: number = 50): Promise<{ userId: string; xp: number; rank: number }[]> {
-    if (!redisClient.isReady) {
-      console.warn('⚠️ Redis not available - returning empty leaderboard');
-      return [];
-    }
-
     try {
+      if (!redisClient || !redisClient.isReady) {
+        console.warn('⚠️ Redis not available - returning empty leaderboard');
+        return [];
+      }
+
       const results = await redisClient.zRangeWithScores(
         this.LEADERBOARD_KEY,
         0,
@@ -43,18 +45,18 @@ export class LeaderboardService {
         rank: index + 1,
       }));
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      console.warn('⚠️ Failed to fetch leaderboard:', error);
       return [];
     }
   }
 
   // Get a user's rank and score
   static async getUserRank(userId: string): Promise<{ rank: number; xp: number } | null> {
-    if (!redisClient.isReady) {
-      return null;
-    }
-
     try {
+      if (!redisClient || !redisClient.isReady) {
+        return null;
+      }
+
       const rank = await redisClient.zRevRank(this.LEADERBOARD_KEY, userId);
       const score = await redisClient.zScore(this.LEADERBOARD_KEY, userId);
 
@@ -67,7 +69,7 @@ export class LeaderboardService {
         xp: Math.round(score),
       };
     } catch (error) {
-      console.error('Error getting user rank:', error);
+      console.warn('⚠️ Failed to get user rank:', error);
       return null;
     }
   }
@@ -113,12 +115,12 @@ export class LeaderboardService {
 
   // Bulk update leaderboard (for initialization)
   static async rebuildLeaderboard(): Promise<void> {
-    if (!redisClient.isReady) {
-      console.warn('⚠️ Redis not available - cannot rebuild leaderboard');
-      return;
-    }
-
     try {
+      if (!redisClient || !redisClient.isReady) {
+        console.warn('⚠️ Redis not available - cannot rebuild leaderboard');
+        return;
+      }
+
       // Clear existing leaderboard
       await redisClient.del(this.LEADERBOARD_KEY);
 
@@ -135,7 +137,7 @@ export class LeaderboardService {
       }
       await pipeline.exec();
 
-      //console.log(`✅ Leaderboard rebuilt with ${users.length} users`);
+      console.log(`✅ Leaderboard rebuilt with ${users.length} users`);
     } catch (error) {
       console.error('Error rebuilding leaderboard:', error);
     }

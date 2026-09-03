@@ -3,7 +3,17 @@ import { z } from 'zod';
 import { Types } from 'mongoose';
 import { CourseService } from './course.service.js';
 import { User } from '../auth/auth.model.js';
-import { LeaderboardService } from '../leaderboard/leaderboard.service.js';
+
+// Import LeaderboardService dynamically to avoid circular dependencies
+const getLeaderboardService = async () => {
+  try {
+    const { LeaderboardService } = await import('../leaderboard/leaderboard.service.js');
+    return LeaderboardService;
+  } catch (error) {
+    console.warn('⚠️ Leaderboard service not available:', error);
+    return null;
+  }
+};
 
 // Validation schemas
 const createCourseSchema = z.object({
@@ -87,8 +97,8 @@ export class CourseController {
 
       res.status(200).json({
         success: true,
-        data: courses,
-        count: courses.length,
+        data: courses || [],
+        count: courses?.length || 0,
       });
     } catch (error: any) {
       console.error('Get published courses error:', error);
@@ -208,6 +218,25 @@ export class CourseController {
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to toggle publish status',
+      });
+    }
+  }
+
+  // ---------- Get Popular Courses ----------
+  static async getPopular(req: Request, res: Response) {
+    try {
+      const limit = parseInt(req.query.limit as string) || 5;
+      const courses = await CourseService.getPopularCourses(limit);
+      
+      res.status(200).json({
+        success: true,
+        data: courses,
+      });
+    } catch (error: any) {
+      console.error('Get popular courses error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to fetch popular courses',
       });
     }
   }
@@ -386,15 +415,27 @@ export class CourseController {
         // Save user
         await user.save();
 
-        // ✅ Update Leaderboard with new XP
-        await LeaderboardService.updateUserScore(userId, user.xp);
-        
-        //console.log(`✅ User ${userId} completed lesson ${lessonId} in course ${courseId}`);
-        //console.log(`📊 XP: ${user.xp}, Level: ${user.level}`);
-        //console.log(`🏆 Leaderboard updated for user ${userId}`);
+        // ✅ Update Leaderboard - Wrap in try-catch to prevent errors
+        try {
+          const LeaderboardService = await getLeaderboardService();
+          if (LeaderboardService) {
+            await LeaderboardService.updateUserScore(userId, user.xp);
+            console.log(`🏆 Leaderboard updated for user ${userId}`);
+          }
+        } catch (leaderboardError: any) {
+          // Leaderboard update failed - log but don't fail the request
+          console.warn('⚠️ Leaderboard update failed (Redis may not be available):', leaderboardError.message);
+        }
+
+        console.log(`✅ User ${userId} completed lesson ${lessonId} in course ${courseId}`);
+        console.log(`📊 XP: ${user.xp}, Level: ${user.level}`);
 
         // Check for badges (optional achievement system)
-        await this.checkBadges(user);
+        try {
+          await this.checkBadges(user);
+        } catch (badgeError: any) {
+          console.warn('⚠️ Badge check failed:', badgeError.message);
+        }
       }
 
       // Get updated progress
@@ -462,9 +503,9 @@ export class CourseController {
         if (!user.badges) user.badges = [];
         user.badges.push(...badgesToAward);
         await user.save();
-        //console.log(`🎖️ Badges awarded to ${user._id}: ${badgesToAward.join(', ')}`);
+        console.log(`🎖️ Badges awarded to ${user._id}: ${badgesToAward.join(', ')}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking badges:', error);
     }
   }
