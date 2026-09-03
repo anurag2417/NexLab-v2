@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Play, CheckCircle, Lock, BookOpen, Award, Star } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { CourseReviews } from '../../components/CourseReviews';
 
 interface Lesson {
   _id: string;
@@ -21,6 +22,8 @@ interface Course {
   instructor: { name: string };
   lessons: Lesson[];
   enrolledStudents: string[];
+  rating?: number;
+  totalReviews?: number;
 }
 
 export const CoursePlayer: React.FC = () => {
@@ -84,7 +87,7 @@ export const CoursePlayer: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent" />
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#10B981] border-t-transparent" />
       </div>
     );
   }
@@ -92,7 +95,7 @@ export const CoursePlayer: React.FC = () => {
   if (!course) {
     return (
       <div className="text-center py-12">
-        <p className="text-text-body">Course not found</p>
+        <p className="text-[#9CA3A0]">Course not found</p>
         <Button variant="primary" onClick={() => navigate('/courses')} className="mt-4">
           Back to Courses
         </Button>
@@ -110,32 +113,39 @@ export const CoursePlayer: React.FC = () => {
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => navigate('/courses')}
-          className="p-2 hover:bg-background-muted rounded-lg transition-colors"
+          className="p-2 hover:bg-[#1E2322] rounded-lg transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 text-text-body" />
+          <ArrowLeft className="w-5 h-5 text-[#9CA3A0]" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-text-heading">{course.title}</h1>
-          <p className="text-text-body text-sm">Instructor: {course.instructor?.name || 'Unknown'}</p>
+          <h1 className="text-2xl font-bold text-[#EDEFEE]">{course.title}</h1>
+          <p className="text-[#9CA3A0] text-sm">Instructor: {course.instructor?.name || 'Unknown'}</p>
+          {course.rating && course.rating > 0 && (
+            <div className="flex items-center gap-1 mt-1">
+              <Star className="w-4 h-4 fill-[#FBBF24] text-[#FBBF24]" />
+              <span className="text-sm font-medium text-[#EDEFEE]">{course.rating.toFixed(1)}</span>
+              <span className="text-xs text-[#5C6360]">({course.totalReviews || 0} reviews)</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="bg-background-light border border-border rounded-xl p-4 mb-6 shadow-sm">
-        <div className="flex items-center justify-between text-sm text-text-body mb-2">
+      <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 mb-6 shadow-sm">
+        <div className="flex items-center justify-between text-sm text-[#9CA3A0] mb-2">
           <span>Course Progress</span>
-          <span className="text-primary-600 font-semibold">{progress}% Complete</span>
+          <span className="text-[#10B981] font-semibold">{progress}% Complete</span>
         </div>
-        <div className="w-full h-2 bg-background-muted rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-[#0D0F0F] rounded-full overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-[#10B981] to-[#34D399] rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <div className="flex items-center gap-4 mt-2 text-xs text-text-muted">
+        <div className="flex items-center gap-4 mt-2 text-xs text-[#5C6360]">
           <span>{completedCount} of {totalLessons} lessons completed</span>
           {xpEarned > 0 && (
-            <span className="text-secondary-600 font-medium">+{xpEarned} XP earned!</span>
+            <span className="text-[#10B981] font-medium">+{xpEarned} XP earned!</span>
           )}
         </div>
       </div>
@@ -144,8 +154,8 @@ export const CoursePlayer: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Video Player */}
         <div className="lg:col-span-2">
-          <div className="bg-background-light border border-border rounded-xl overflow-hidden shadow-sm">
-            <div className="aspect-video bg-gray-900 flex items-center justify-center">
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
+            <div className="aspect-video bg-[#0D0F0F] flex items-center justify-center">
               {currentLesson?.videoUrl ? (
                 <iframe
                   src={currentLesson.videoUrl.replace('watch?v=', 'embed/')}
@@ -155,8 +165,8 @@ export const CoursePlayer: React.FC = () => {
                 />
               ) : (
                 <div className="text-center">
-                  <Play className="w-16 h-16 text-gray-600 mx-auto" />
-                  <p className="text-gray-400 mt-2">Video coming soon</p>
+                  <Play className="w-16 h-16 text-[#5C6360] mx-auto" />
+                  <p className="text-[#5C6360] mt-2">Video coming soon</p>
                 </div>
               )}
             </div>
@@ -164,11 +174,11 @@ export const CoursePlayer: React.FC = () => {
             <div className="p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-text-heading">
+                  <h2 className="text-xl font-semibold text-[#EDEFEE]">
                     {currentLesson?.title || 'No lesson selected'}
                   </h2>
                   {currentLesson?.description && (
-                    <p className="text-text-body mt-2">{currentLesson.description}</p>
+                    <p className="text-[#9CA3A0] mt-2">{currentLesson.description}</p>
                   )}
                 </div>
                 {currentLesson && (
@@ -198,12 +208,12 @@ export const CoursePlayer: React.FC = () => {
 
         {/* Lesson List */}
         <div className="lg:col-span-1">
-          <div className="bg-background-light border border-border rounded-xl shadow-sm">
-            <div className="p-4 border-b border-border">
-              <h3 className="font-semibold text-text-heading">Course Content</h3>
-              <p className="text-xs text-text-muted">{totalLessons} lessons</p>
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl shadow-sm">
+            <div className="p-4 border-b border-[#2A302E]">
+              <h3 className="font-semibold text-[#EDEFEE]">Course Content</h3>
+              <p className="text-xs text-[#5C6360]">{totalLessons} lessons</p>
             </div>
-            <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
+            <div className="divide-y divide-[#2A302E] max-h-[500px] overflow-y-auto">
               {course.lessons.map((lesson, index) => {
                 const isCompleted = isLessonCompleted(lesson._id);
                 const isCurrent = index === currentLessonIndex;
@@ -213,30 +223,30 @@ export const CoursePlayer: React.FC = () => {
                     key={lesson._id}
                     onClick={() => setCurrentLessonIndex(index)}
                     className={`
-                      w-full text-left p-4 hover:bg-background-muted transition-colors flex items-center gap-3
-                      ${isCurrent ? 'bg-primary-50 border-l-4 border-primary-600' : ''}
+                      w-full text-left p-4 hover:bg-[#1E2322] transition-colors flex items-center gap-3
+                      ${isCurrent ? 'bg-[#10B981]/5 border-l-4 border-[#10B981]' : ''}
                       ${isCompleted ? 'opacity-75' : ''}
                     `}
                   >
                     <div className="flex-shrink-0">
                       {isCompleted ? (
-                        <CheckCircle className="w-5 h-5 text-success-500" />
+                        <CheckCircle className="w-5 h-5 text-[#10B981]" />
                       ) : (
-                        <span className="w-5 h-5 flex items-center justify-center text-xs font-medium text-text-muted">
+                        <span className="w-5 h-5 flex items-center justify-center text-xs font-medium text-[#5C6360]">
                           {index + 1}
                         </span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm truncate ${isCurrent ? 'text-primary-600 font-medium' : 'text-text-body'}`}>
+                      <p className={`text-sm truncate ${isCurrent ? 'text-[#10B981] font-medium' : 'text-[#9CA3A0]'}`}>
                         {lesson.title}
                       </p>
                       {lesson.duration && (
-                        <p className="text-xs text-text-muted">{lesson.duration} min</p>
+                        <p className="text-xs text-[#5C6360]">{lesson.duration} min</p>
                       )}
                     </div>
                     {isCompleted && (
-                      <span className="text-xs text-success-600 font-medium">Done</span>
+                      <span className="text-xs text-[#10B981] font-medium">Done</span>
                     )}
                   </button>
                 );
@@ -262,6 +272,18 @@ export const CoursePlayer: React.FC = () => {
         >
           Next Lesson
         </Button>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="mt-8 pt-8 border-t border-[#2A302E]">
+        <h2 className="text-xl font-bold text-[#EDEFEE] mb-4">Course Reviews</h2>
+        <CourseReviews 
+          courseId={course._id} 
+          onReviewChange={() => {
+            // Refresh course data when review changes
+            fetchCourse();
+          }}
+        />
       </div>
     </div>
   );

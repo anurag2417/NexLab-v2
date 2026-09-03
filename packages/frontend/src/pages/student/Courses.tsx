@@ -71,7 +71,7 @@ export const StudentCourses: React.FC = () => {
 
   const isUserEnrolled = (course: Course): boolean => {
     const userId = user?._id || user?.id;
-    return (!!userId && course.enrolledStudents?.includes(userId)) || 
+    return (userId ? course.enrolledStudents?.includes(userId) : false) || 
            user?.enrolledCourses?.includes(course._id) || false;
   };
 
@@ -149,10 +149,11 @@ export const StudentCourses: React.FC = () => {
               >
                 <div className="h-48 bg-gradient-to-br from-[#10B981]/20 to-[#059669]/10 flex items-center justify-center relative">
                   <BookOpen className="w-12 h-12 text-[#10B981] opacity-40" />
-                  {course.rating && (
+                  {course.rating && course.rating > 0 && (
                     <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#0D0F0F]/80 px-2 py-1 rounded-lg">
                       <Star className="w-3 h-3 fill-[#FBBF24] text-[#FBBF24]" />
                       <span className="text-xs font-medium text-[#EDEFEE]">{course.rating.toFixed(1)}</span>
+                      <span className="text-xs text-[#5C6360]">({course.totalReviews || 0})</span>
                     </div>
                   )}
                 </div>
@@ -167,6 +168,14 @@ export const StudentCourses: React.FC = () => {
 
                   <h3 className="text-lg font-semibold text-[#EDEFEE]">{course.title}</h3>
                   <p className="text-sm text-[#9CA3A0] mt-1 line-clamp-2">{course.description}</p>
+
+                  {course.rating && course.rating > 0 && (
+                    <div className="flex items-center gap-1 mt-2">
+                      <Star className="w-3.5 h-3.5 fill-[#FBBF24] text-[#FBBF24]" />
+                      <span className="text-sm font-medium text-[#EDEFEE]">{course.rating.toFixed(1)}</span>
+                      <span className="text-xs text-[#5C6360]">({course.totalReviews || 0})</span>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#2A302E]">
                     <div className="flex items-center gap-3 text-xs text-[#9CA3A0]">

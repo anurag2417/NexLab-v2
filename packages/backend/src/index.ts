@@ -17,6 +17,7 @@ import sandboxRoutes from './modules/sandbox/sandbox.routes.js';
 import leaderboardRoutes from './modules/leaderboard/leaderboard.routes.js';
 import userRoutes from './modules/user/user.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
+import reviewRoutes from './modules/reviews/review.routes.js';
 
 // --- Init App ---
 const app = express();
@@ -47,6 +48,7 @@ app.use('/api/sandbox', sandboxRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Test auth endpoint (no auth required)
 app.get('/api/test-auth', (req, res) => {
