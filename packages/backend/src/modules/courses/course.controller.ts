@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Types } from 'mongoose';
 import { CourseService } from './course.service.js';
 import { User } from '../auth/auth.model.js';
+import { LeaderboardService } from '../leaderboard/leaderboard.service.js';
 
 // Validation schemas
 const createCourseSchema = z.object({
@@ -327,6 +328,7 @@ export class CourseController {
       const { courseId, lessonId } = req.params;
       const userId = req.userId;
 
+      // Find user
       const user = await User.findById(userId);
       if (!user) {
         return res.status(404).json({
@@ -335,6 +337,7 @@ export class CourseController {
         });
       }
 
+      // Find course
       const course = await CourseService.getCourseById(courseId);
       if (!course) {
         return res.status(404).json({
@@ -343,6 +346,7 @@ export class CourseController {
         });
       }
 
+      // Check if lesson exists in course
       const lessonExists = course.lessons?.some(l => l._id?.toString() === lessonId);
       if (!lessonExists) {
         return res.status(404).json({
@@ -351,6 +355,7 @@ export class CourseController {
         });
       }
 
+      // Initialize progress if needed
       if (!user.progress) {
         user.progress = new Map();
       }
@@ -362,20 +367,42 @@ export class CourseController {
 
       const completedLessons = user.progress.get(progressKey) || [];
       
+      // Only process if lesson not already completed
       if (!completedLessons.includes(lessonId)) {
+        // Add lesson to completed
         completedLessons.push(lessonId);
         user.progress.set(progressKey, completedLessons);
         
+        // Award XP
         const xpGain = 10;
         user.xp = (user.xp || 0) + xpGain;
         
+        // Update level
         const newLevel = Math.floor(user.xp / 100) + 1;
         if (newLevel > user.level) {
           user.level = newLevel;
         }
         
+        // Save user
         await user.save();
+
+        // ✅ Update Leaderboard with new XP
+        await LeaderboardService.updateUserScore(userId, user.xp);
+        
+        console.log(`✅ User ${userId} completed lesson ${lessonId} in course ${courseId}`);
+        console.log(`📊 XP: ${user.xp}, Level: ${user.level}`);
+        console.log(`🏆 Leaderboard updated for user ${userId}`);
+
+        // Check for badges (optional achievement system)
+        await this.checkBadges(user);
       }
+
+      // Get updated progress
+      const updatedCompletedLessons = user.progress.get(progressKey) || [];
+      const totalLessons = course.lessons?.length || 0;
+      const percentage = totalLessons > 0 
+        ? Math.round((updatedCompletedLessons.length / totalLessons) * 100) 
+        : 0;
 
       res.status(200).json({
         success: true,
@@ -384,19 +411,61 @@ export class CourseController {
           xpEarned: 10,
           totalXp: user.xp,
           level: user.level,
-          completedLessons: completedLessons.length,
-          totalLessons: course.lessons?.length || 0,
-          percentage: course.lessons?.length > 0 
-            ? Math.round((completedLessons.length / course.lessons.length) * 100) 
-            : 0,
+          completedLessons: updatedCompletedLessons.length,
+          totalLessons: totalLessons,
+          percentage: percentage,
+          leaderboardUpdated: true,
         },
       });
     } catch (error: any) {
-      console.error('Complete lesson error:', error);
+      console.error('❌ Complete lesson error:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to complete lesson',
       });
+    }
+  }
+
+  // ---------- Helper: Check and Award Badges ----------
+  private static async checkBadges(user: any): Promise<void> {
+    try {
+      const badgesToAward: string[] = [];
+      
+      // Badge: First Steps - Complete first lesson
+      if (user.xp >= 10 && !user.badges?.includes('First Steps')) {
+        badgesToAward.push('First Steps');
+      }
+      
+      // Badge: Dedicated Learner - Complete 5 lessons
+      let totalLessons = 0;
+      if (user.progress) {
+        for (const [, lessons] of user.progress) {
+          totalLessons += lessons.length;
+        }
+      }
+      if (totalLessons >= 5 && !user.badges?.includes('Dedicated Learner')) {
+        badgesToAward.push('Dedicated Learner');
+      }
+      
+      // Badge: Master Student - Complete 10 lessons
+      if (totalLessons >= 10 && !user.badges?.includes('Master Student')) {
+        badgesToAward.push('Master Student');
+      }
+      
+      // Badge: Level Up - Reach level 5
+      if (user.level >= 5 && !user.badges?.includes('Level Up!')) {
+        badgesToAward.push('Level Up!');
+      }
+      
+      // Award badges if any
+      if (badgesToAward.length > 0) {
+        if (!user.badges) user.badges = [];
+        user.badges.push(...badgesToAward);
+        await user.save();
+        console.log(`🎖️ Badges awarded to ${user._id}: ${badgesToAward.join(', ')}`);
+      }
+    } catch (error) {
+      console.error('Error checking badges:', error);
     }
   }
 }

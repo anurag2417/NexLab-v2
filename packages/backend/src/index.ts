@@ -14,6 +14,7 @@ import { logger } from './shared/logger.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import courseRoutes from './modules/courses/course.routes.js';  // ✅ Make sure this exists
 import sandboxRoutes from './modules/sandbox/sandbox.routes.js';
+import leaderboardRoutes from './modules/leaderboard/leaderboard.routes.js';
 
 // --- Init App ---
 const app = express();
@@ -34,18 +35,19 @@ app.use(cookieParser());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 
 // 3. Routes
-console.log('📌 Registering routes...');
+//console.log('📌 Registering routes...');
 app.use('/api/auth', authRoutes);
-console.log('✅ Auth routes registered at /api/auth');
+//console.log('✅ Auth routes registered at /api/auth');
 app.use('/api/courses', courseRoutes);  // ✅ Make sure this line exists
-console.log('✅ Course routes registered at /api/courses');
+//console.log('✅ Course routes registered at /api/courses');
 app.use('/api/sandbox', sandboxRoutes);
-console.log('✅ Sandbox routes registered at /api/sandbox');
+//console.log('✅ Sandbox routes registered at /api/sandbox');
+app.use('/api/leaderboard', leaderboardRoutes);
 
 // Test auth endpoint (no auth required)
 app.get('/api/test-auth', (req, res) => {
-  console.log('📥 Test auth endpoint called');
-  console.log('🍪 Cookies:', req.cookies);
+  //console.log('📥 Test auth endpoint called');
+  //console.log('🍪 Cookies:', req.cookies);
   res.json({ 
     success: true, 
     message: 'API is working!',
@@ -60,7 +62,7 @@ app.get('/api/health', (req, res) => {
 
 // 4. Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('❌ Global error:', err);
+  //console.error('❌ Global error:', err);
   logger.error(err.stack);
   res.status(err.status || 500).json({ success: false, message: err.message || 'Internal Server Error' });
 });

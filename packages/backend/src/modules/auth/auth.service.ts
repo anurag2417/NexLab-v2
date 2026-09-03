@@ -1,14 +1,13 @@
 import jwt from 'jsonwebtoken';
 import { Response } from 'express';
 import { env } from '../../config/env.zod.js';
+import { LeaderboardService } from '../leaderboard/leaderboard.service.js';
 
 export class AuthService {
-  // Generate JWT token
   static generateToken(userId: string, email: string): string {
     return jwt.sign({ id: userId, email }, env.JWT_SECRET, { expiresIn: '7d' });
   }
 
-  // Set token as httpOnly cookie
   static setTokenCookie(res: Response, userId: string, email: string) {
     const token = this.generateToken(userId, email);
 
@@ -19,8 +18,6 @@ export class AuthService {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
     });
-
-    console.log('🍪 Cookie set successfully for user:', userId);
   }
 
   static clearTokenCookie(res: Response) {
@@ -30,5 +27,10 @@ export class AuthService {
       sameSite: 'lax',
       path: '/',
     });
+  }
+
+  // Update leaderboard when XP changes
+  static async updateLeaderboard(userId: string, xp: number): Promise<void> {
+    await LeaderboardService.updateUserScore(userId, xp);
   }
 }
