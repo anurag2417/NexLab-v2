@@ -9,61 +9,28 @@ import { redisClient } from '../../config/redis.js';
 
 const execAsync = promisify(exec);
 
-// Validation schema for code execution - ONLY 4 LANGUAGES
+// ✅ Only JavaScript
 const executeSchema = z.object({
-  language: z.enum(['python', 'javascript', 'java', 'cpp']),
+  language: z.enum(['javascript']),
   code: z.string().max(50000, 'Code exceeds 50KB limit'),
   stdin: z.string().optional().default(''),
   args: z.array(z.string()).optional().default([]),
   version: z.string().optional(),
 });
 
-// Language configurations - ONLY 4 LANGUAGES
-const LANGUAGE_CONFIG: Record<string, {
+// ✅ JavaScript config for local execution
+const LANGUAGE_CONFIG: Record<string, { 
   extension: string;
   executeCmd: (filePath: string) => string;
-  compileCmd?: (filePath: string) => string;
 }> = {
-  python: {
-    extension: 'py',
-    executeCmd: (filePath) => `python3 "${filePath}"`
-  },
   javascript: {
     extension: 'js',
-    executeCmd: (filePath) => `node "${filePath}"`
-  },
-  java: {
-    extension: 'java',
-    compileCmd: (filePath) => `javac "${filePath}"`,
-    executeCmd: (filePath) => {
-      const dir = path.dirname(filePath);
-      const className = path.basename(filePath, '.java');
-      return `cd "${dir}" && java "${className}"`;
-    }
-  },
-  cpp: {
-    extension: 'cpp',
-    compileCmd: (filePath) => {
-      const outputPath = filePath.replace('.cpp', '');
-      return `g++ "${filePath}" -o "${outputPath}"`;
-    },
-    executeCmd: (filePath) => `"${filePath.replace('.cpp', '')}"`
+    executeCmd: (filePath) => `node "${filePath}" 2>&1`
   }
 };
 
-// Sample code snippets for 4 languages
+// ✅ JavaScript sample code
 export const SAMPLE_CODE: Record<string, string> = {
-  python: `# Welcome to NexLab Python Sandbox!
-# Write your Python code here
-
-print("Hello, World!")
-print("This is Python running in NexLab!")
-
-# Try a simple calculation
-x = 10
-y = 20
-print(f"Sum: {x + y}")`,
-
   javascript: `// Welcome to NexLab JavaScript Sandbox!
 // Write your JavaScript code here
 
@@ -73,50 +40,17 @@ console.log("This is JavaScript running in NexLab!");
 // Try a simple calculation
 const x = 10;
 const y = 20;
-console.log(\`Sum: \${x + y}\`);`,
-
-  java: `// Welcome to NexLab Java Sandbox!
-// Write your Java code here
-
-public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-        System.out.println("This is Java running in NexLab!");
-        
-        // Try a simple calculation
-        int x = 10;
-        int y = 20;
-        System.out.println("Sum: " + (x + y));
-    }
-}`,
-
-  cpp: `// Welcome to NexLab C++ Sandbox!
-// Write your C++ code here
-
-#include <iostream>
-using namespace std;
-
-int main() {
-    cout << "Hello, World!" << endl;
-    cout << "This is C++ running in NexLab!" << endl;
-    
-    // Try a simple calculation
-    int x = 10;
-    int y = 20;
-    cout << "Sum: " << x + y << endl;
-    
-    return 0;
-}`
+console.log(\`Sum: \${x + y}\`);`
 };
 
 export class SandboxController {
   static async execute(req: Request, res: Response) {
     const tempDir = path.join(process.cwd(), 'temp');
-
+    
     try {
-      //console.log('🏖️ Sandbox execute called');
-      //console.log('👤 req.userId:', req.userId);
-      //console.log('📦 req.body:', req.body);
+      console.log('🏖️ Sandbox execute called');
+      console.log('👤 req.userId:', req.userId);
+      console.log('📦 req.body:', req.body);
 
       if (!req.userId) {
         console.warn('⚠️ No userId found - authentication failed');
@@ -129,7 +63,7 @@ export class SandboxController {
       const { language, code, stdin } = executeSchema.parse(req.body);
       const userId = req.userId;
 
-      //console.log(`📝 Executing ${language} code for user ${userId}`);
+      console.log(`📝 Executing ${language} code for user ${userId}`);
 
       // Rate Limiting (Redis)
       const rateKey = `sandbox:rate:${userId}`;
@@ -144,11 +78,7 @@ export class SandboxController {
         }
       }
 
-      // Create Temp Directory
-      await fs.mkdir(tempDir, { recursive: true });
-
-      // Create Temp File
-      const fileId = randomUUID();
+      // Get language config
       const config = LANGUAGE_CONFIG[language];
       if (!config) {
         return res.status(400).json({
@@ -157,55 +87,33 @@ export class SandboxController {
         });
       }
 
+      // Create temp directory
+      await fs.mkdir(tempDir, { recursive: true });
+
+      // Create temp file
+      const fileId = randomUUID();
       const fileName = `code_${fileId}.${config.extension}`;
       const filePath = path.join(tempDir, fileName);
 
-      // For Java, always use "Main" as the class name
-      let finalCode = code;
-      if (language === 'java') {
-        // Ensure the class is named "Main"
-        finalCode = code.replace(/public\s+class\s+\w+/g, 'public class Main');
-      }
-
-      await fs.writeFile(filePath, finalCode, 'utf-8');
-      //(`📄 Created temp file: ${filePath}`);
+      // Write code to file
+      await fs.writeFile(filePath, code, 'utf-8');
+      console.log(`📄 Created temp file: ${filePath}`);
 
       let output = '';
       let error = '';
       let exitCode = 0;
 
-      // Compile if needed
-      if (config.compileCmd) {
-        try {
-          //console.log(`🔨 Compiling ${language}...`);
-          await execAsync(config.compileCmd(filePath), { timeout: 10000 });
-        } catch (compileError: any) {
-          console.error('Compilation error:', compileError);
-          return res.status(200).json({
-            success: false,
-            output: '',
-            error: compileError.stderr || compileError.message || 'Compilation failed',
-            executed: false,
-            isCompileError: true,
-          });
-        }
-      }
-
-      // Execute Code
+      // Execute code
       try {
-        //console.log(`🚀 Executing ${language}...`);
-        const execOptions = {
-          timeout: 5000,
-          env: { ...process.env, PATH: process.env.PATH },
-        };
-
-        let cmd = config.executeCmd(filePath);
-        if (language === 'java') {
-          const javaDir = path.dirname(filePath);
-          cmd = `cd "${javaDir}" && java Main`;
-        }
-
-        const { stdout, stderr } = await execAsync(cmd, execOptions);
+        console.log(`🚀 Executing JavaScript...`);
+        const { stdout, stderr } = await execAsync(
+          config.executeCmd(filePath),
+          {
+            timeout: 5000,
+            env: { ...process.env, PATH: process.env.PATH },
+            maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+          }
+        );
         output = stdout || '';
         error = stderr || '';
         exitCode = 0;
@@ -216,35 +124,28 @@ export class SandboxController {
         exitCode = execError.code || 1;
       }
 
-      // Cleanup Temp Files
+      // Cleanup temp files
       try {
         await fs.rm(filePath, { force: true });
-        if (config.compileCmd) {
-          const basePath = filePath.replace(`.${config.extension}`, '');
-          const extensions = ['.class', '.jar', '.exe', '.out', ''];
-          for (const ext of extensions) {
-            try {
-              await fs.rm(`${basePath}${ext}`, { force: true });
-            } catch (e) { /* ignore */ }
-          }
-        }
       } catch (cleanupError) {
         console.warn('Cleanup warning:', cleanupError);
       }
 
-      // Return Response
+      // Return response
       return res.status(200).json({
         success: exitCode === 0,
         output: output || '',
         error: error || '',
         executed: true,
         exitCode: exitCode,
-        language: language,
+        language: 'javascript',
+        executionTime: '0.1',
       });
 
     } catch (error: any) {
       console.error('❌ Sandbox execution error:', error);
 
+      // Cleanup temp directory if possible
       try {
         await fs.rm(tempDir, { recursive: true, force: true });
       } catch (e) { /* ignore */ }
@@ -263,7 +164,7 @@ export class SandboxController {
     }
   }
 
-  // Get available languages - ONLY 4 LANGUAGES
+  // ✅ Only JavaScript languages
   static async getLanguages(req: Request, res: Response) {
     try {
       const languages = Object.keys(LANGUAGE_CONFIG).map((key) => ({

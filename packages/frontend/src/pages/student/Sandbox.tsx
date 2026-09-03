@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Loader2, Terminal, ChevronDown, X, Copy, Check } from 'lucide-react';
+import { Play, Loader2, Terminal, Copy, Check, X } from 'lucide-react'; // ✅ Added 'X' here
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 
@@ -24,58 +24,33 @@ interface ExecutionResult {
 }
 
 export const Sandbox: React.FC = () => {
-  const [languages, setLanguages] = useState<Language[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('javascript'); // ✅ Changed to JavaScript
+  const [language, setLanguage] = useState<Language | null>(null);
   const [code, setCode] = useState<string>('');
   const [stdin, setStdin] = useState<string>('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [result, setResult] = useState<ExecutionResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchLanguages();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsLanguageDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchLanguages = async () => {
     try {
       const response = await api.get('/sandbox/languages');
       const data = response.data.data;
-      setLanguages(data);
       if (data.length > 0) {
-        // ✅ Set JavaScript as default when languages load
-        const defaultLang = data.find(l => l.id === 'javascript') || data[0];
-        setSelectedLanguage(defaultLang.id);
-        setCode(defaultLang.sample);
+        const lang = data[0];
+        setLanguage(lang);
+        setCode(lang.sample);
       }
     } catch (error) {
       console.error('Error fetching languages:', error);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleLanguageChange = (languageId: string) => {
-    const lang = languages.find(l => l.id === languageId);
-    if (lang) {
-      setSelectedLanguage(languageId);
-      setCode(lang.sample);
-      setResult(null);
-    }
-    setIsLanguageDropdownOpen(false);
   };
 
   const handleExecute = async () => {
@@ -89,7 +64,7 @@ export const Sandbox: React.FC = () => {
 
     try {
       const response = await api.post('/sandbox/execute', {
-        language: selectedLanguage,
+        language: 'javascript',
         code: code,
         stdin: stdin,
       });
@@ -126,16 +101,6 @@ export const Sandbox: React.FC = () => {
     setResult(null);
   };
 
-  const getLanguageColor = (languageId: string) => {
-    const colors: Record<string, string> = {
-      python: 'bg-[#10B981]',
-      javascript: 'bg-[#FBBF24]',
-      java: 'bg-[#F87171]',
-      cpp: 'bg-[#60A5FA]',
-    };
-    return colors[languageId] || 'bg-[#10B981]';
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -144,64 +109,40 @@ export const Sandbox: React.FC = () => {
     );
   }
 
-  const currentLanguage = languages.find(l => l.id === selectedLanguage);
-
   return (
     <div className="py-8 max-w-full px-4 md:px-8 lg:px-12">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#EDEFEE]">Code Sandbox</h1>
-          <p className="text-[#9CA3A0] mt-1">Write, test, and run code in Python, JavaScript, Java, and C++</p>
+          <p className="text-[#9CA3A0] mt-1">Write and run JavaScript code</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg hover:border-[#10B981]/30 transition-colors"
-            >
-              <span className={`w-2 h-2 rounded-full ${getLanguageColor(selectedLanguage)}`} />
-              <span className="font-medium text-[#EDEFEE]">{currentLanguage?.name || 'Select Language'}</span>
-              <ChevronDown className={`w-4 h-4 text-[#9CA3A0] transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
+        <Button
+          variant="primary"
+          onClick={handleExecute}
+          disabled={isExecuting}
+          className="gap-2"
+        >
+          {isExecuting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Running...
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4" />
+              Run Code
+            </>
+          )}
+        </Button>
+      </div>
 
-            {isLanguageDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-[#161A19] border border-[#2A302E] rounded-lg shadow-lg py-1 z-10">
-                {languages.map((lang) => (
-                  <button
-                    key={lang.id}
-                    onClick={() => handleLanguageChange(lang.id)}
-                    className={`w-full text-left px-4 py-2.5 hover:bg-[#1E2322] transition-colors flex items-center gap-2 ${
-                      selectedLanguage === lang.id ? 'bg-[#10B981]/10 text-[#10B981]' : 'text-[#9CA3A0]'
-                    }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${getLanguageColor(lang.id)}`} />
-                    <span>{lang.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <Button
-            variant="primary"
-            onClick={handleExecute}
-            disabled={isExecuting}
-            className="gap-2"
-          >
-            {isExecuting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Running...
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" />
-                Run Code
-              </>
-            )}
-          </Button>
-        </div>
+      {/* Language Badge */}
+      <div className="mb-4">
+        <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#FBBF24]/10 border border-[#FBBF24]/20 rounded-lg text-sm text-[#FBBF24]">
+          <span className="w-2 h-2 rounded-full bg-[#FBBF24]" />
+          JavaScript
+        </span>
       </div>
 
       {/* Main Content */}
@@ -210,11 +151,9 @@ export const Sandbox: React.FC = () => {
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-[#2A302E] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${getLanguageColor(selectedLanguage)}`} />
-              <span className="text-sm font-medium text-[#EDEFEE]">
-                {currentLanguage?.name || 'Code Editor'}
-              </span>
-              <span className="text-xs text-[#5C6360]">.{(currentLanguage?.extension || 'txt')}</span>
+              <span className="w-2 h-2 rounded-full bg-[#FBBF24]" />
+              <span className="text-sm font-medium text-[#EDEFEE]">JavaScript</span>
+              <span className="text-xs text-[#5C6360]">.js</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-[#5C6360]">
               <span>⌘ + Enter to run</span>
@@ -230,7 +169,7 @@ export const Sandbox: React.FC = () => {
               }
             >
               <MonacoEditor
-                language={selectedLanguage}
+                language="javascript"
                 value={code}
                 onChange={(value) => setCode(value || '')}
                 theme="vs-dark"
@@ -354,7 +293,7 @@ export const Sandbox: React.FC = () => {
       {/* Footer */}
       <div className="mt-4 text-xs text-[#5C6360] text-center">
         <kbd className="px-2.5 py-1 bg-[#161A19] border border-[#2A302E] rounded text-xs">⌘ + Enter</kbd>
-        {' '}to run code • 4 languages supported • 5 executions per minute
+        {' '}to run code • JavaScript only • 5 executions per minute
       </div>
     </div>
   );
