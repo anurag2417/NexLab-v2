@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Response } from 'express';
 import { env } from '../../config/env.zod.js';
-import { LeaderboardService } from '../leaderboard/leaderboard.service.js';
 
 export class AuthService {
   static generateToken(userId: string, email: string): string {
@@ -13,24 +12,22 @@ export class AuthService {
 
     res.cookie('token', token, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
+      // Add partitioned attribute for Chrome
+      partitioned: true,
     });
   }
 
   static clearTokenCookie(res: Response) {
     res.clearCookie('token', {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
+      partitioned: true,
     });
-  }
-
-  // Update leaderboard when XP changes
-  static async updateLeaderboard(userId: string, xp: number): Promise<void> {
-    await LeaderboardService.updateUserScore(userId, xp);
   }
 }

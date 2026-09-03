@@ -1,35 +1,38 @@
 import { Request, Response } from 'express';
 import { User } from '../auth/auth.model.js';
 import { Course } from '../courses/course.model.js';
-import { redisClient } from '../../config/redis.js';
 
 export class AdminAnalyticsController {
-  // ---------- Get Dashboard Overview ----------
+  // ---------- Get Overview ----------
   static async getOverview(req: Request, res: Response) {
     try {
       // Get basic counts
-      const [totalStudents, totalCourses, totalLessons, totalEnrollments] = await Promise.all([
+      const [totalStudents, totalCourses] = await Promise.all([
         User.countDocuments({ role: 'student' }),
         Course.countDocuments(),
-        Course.aggregate([
-          { $unwind: { path: '$lessons', preserveNullAndEmptyArrays: true } },
-          { $count: 'total' }
-        ]),
-        Course.aggregate([
-          { $unwind: { path: '$enrolledStudents', preserveNullAndEmptyArrays: true } },
-          { $count: 'total' }
-        ])
       ]);
 
       // Get published courses
       const publishedCourses = await Course.countDocuments({ isPublished: true });
 
-      // Get revenue
-      const revenueData = await Course.aggregate([
-        { $unwind: { path: '$enrolledStudents', preserveNullAndEmptyArrays: true } },
-        { $group: { _id: null, totalRevenue: { $sum: '$price' } } }
-      ]);
-      const totalRevenue = revenueData[0]?.totalRevenue || 0;
+      // Get total lessons
+      const courses = await Course.find().select('lessons');
+      let totalLessons = 0;
+      for (const course of courses) {
+        totalLessons += course.lessons?.length || 0;
+      }
+
+      // Get total enrollments
+      let totalEnrollments = 0;
+      for (const course of courses) {
+        totalEnrollments += course.enrolledStudents?.length || 0;
+      }
+
+      // Get total revenue
+      let totalRevenue = 0;
+      for (const course of courses) {
+        totalRevenue += (course.price || 0) * (course.enrolledStudents?.length || 0);
+      }
 
       // Get growth data (last 7 days)
       const growthData = await this.getGrowthData();
@@ -41,8 +44,8 @@ export class AdminAnalyticsController {
             totalStudents,
             totalCourses,
             publishedCourses,
-            totalLessons: totalLessons[0]?.total || 0,
-            totalEnrollments: totalEnrollments[0]?.total || 0,
+            totalLessons,
+            totalEnrollments,
             totalRevenue: Math.round(totalRevenue * 100) / 100,
           },
           growth: growthData,
@@ -77,10 +80,10 @@ export class AdminAnalyticsController {
         });
 
         const newEnrollments = await Course.aggregate([
-          { $unwind: '$enrolledStudents' },
+          { $unwind: { path: '$enrolledStudents', preserveNullAndEmptyArrays: true } },
           { 
             $match: {
-              'enrolledStudents': { 
+              enrolledStudents: { 
                 $in: await User.find({
                   role: 'student',
                   createdAt: { $gte: startOfDay, $lte: endOfDay }
@@ -124,25 +127,6 @@ export class AdminAnalyticsController {
         },
         { $sort: { enrolledStudents: -1 } },
         { $limit: 10 }
-      ]);
-
-      // Get course completion rates
-      const coursesWithProgress = await Course.aggregate([
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'enrolledStudents',
-            foreignField: '_id',
-            as: 'students'
-          }
-        },
-        {
-          $project: {
-            title: 1,
-            enrolledStudents: { $size: '$enrolledStudents' },
-            lessons: { $size: '$lessons' },
-          }
-        }
       ]);
 
       // Get distribution by level
@@ -211,42 +195,11 @@ export class AdminAnalyticsController {
         }
       ]);
 
-      // Get students with most courses
-      const topStudents = await Course.aggregate([
-        { $unwind: '$enrolledStudents' },
-        {
-          $group: {
-            _id: '$enrolledStudents',
-            courses: { $addToSet: '$title' },
-            count: { $sum: 1 },
-          }
-        },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-        {
-          $lookup: {
-            from: 'users',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'user'
-          }
-        },
-        {
-          $project: {
-            userId: '$_id',
-            name: { $arrayElemAt: ['$user.name', 0] },
-            email: { $arrayElemAt: ['$user.email', 0] },
-            courseCount: '$count',
-          }
-        }
-      ]);
-
       res.status(200).json({
         success: true,
         data: {
           levelDistribution,
           avgStats: avgStats[0] || { avgXp: 0, avgLevel: 0, maxXp: 0, maxLevel: 0 },
-          topStudents,
           totalStudents: await User.countDocuments({ role: 'student' }),
         },
       });
@@ -277,7 +230,10 @@ export class AdminAnalyticsController {
       ]);
 
       // Calculate total revenue
-      const totalRevenue = revenueByCourse.reduce((acc, c) => acc + c.revenue, 0);
+      let totalRevenue = 0;
+      for (const course of revenueByCourse) {
+        totalRevenue += course.revenue || 0;
+      }
 
       res.status(200).json({
         success: true,
@@ -318,21 +274,16 @@ export class AdminAnalyticsController {
         }
       ]);
 
-      // Calculate average completion (approximate)
-      const avgCompletion = completionRates.reduce((acc, c) => {
-        // Estimate based on enrolled students
-        return acc + (c.enrolledCount > 0 ? 1 : 0);
-      }, 0) / (completionRates.length || 1);
+      const totalEnrollments = await Course.aggregate([
+        { $unwind: { path: '$enrolledStudents', preserveNullAndEmptyArrays: true } },
+        { $count: 'total' }
+      ]);
 
       res.status(200).json({
         success: true,
         data: {
           totalCourses: await Course.countDocuments(),
-          totalEnrollments: await Course.aggregate([
-            { $unwind: '$enrolledStudents' },
-            { $count: 'total' }
-          ]).then(r => r[0]?.total || 0),
-          averageCompletionRate: Math.round(avgCompletion * 100),
+          totalEnrollments: totalEnrollments[0]?.total || 0,
           courseEngagement: completionRates.slice(0, 10),
         },
       });
