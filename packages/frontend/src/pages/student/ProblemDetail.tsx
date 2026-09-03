@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Play, Loader2, CheckCircle, XCircle, 
-  ChevronDown, ChevronUp, Copy, Check, Lightbulb, Save
+  ArrowLeft, Loader2, CheckCircle, XCircle, 
+  ChevronDown, ChevronUp, Lightbulb
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { CodeEditor } from '../../components/CodeEditor';
 
 interface Problem {
   _id: string;
@@ -30,74 +31,34 @@ interface SubmissionResult {
   errorMessage?: string;
 }
 
-// Default starter code if none is provided
-const DEFAULT_STARTER_CODE = `// Write your solution here
-function solution() {
-  // Your code goes here
-  return 0;
-}`;
-
 export const ProblemDetail: React.FC = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
-  const [code, setCode] = useState(DEFAULT_STARTER_CODE);
+  const [code, setCode] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [showHints, setShowHints] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [lineCount, setLineCount] = useState(1);
 
   useEffect(() => {
     if (slug) fetchProblem();
   }, [slug]);
 
   const fetchProblem = async () => {
-  setLoading(true);
-  try {
-    console.log('📥 Fetching problem with slug:', slug);
-    const response = await api.get(`/problems/${slug}`);
-    console.log('📊 Problem response:', response.data);
-    
-    const data = response.data.data;
-    setProblem(data.problem);
-    
-    // ✅ Get starter code from problem
-    let starterCode = data.problem.starterCode;
-    console.log('📝 Starter code from DB:', starterCode);
-    
-    // If starterCode is empty or not a string, generate one
-    if (!starterCode || typeof starterCode !== 'string' || starterCode.trim() === '') {
-      console.log('⚠️ No starter code found, generating from title');
-      const functionName = data.problem.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, '');
-      
-      starterCode = `function ${functionName}() {\n  // Write your solution here\n  // Return the result\n  return 0;\n}`;
+    setLoading(true);
+    try {
+      const response = await api.get(`/problems/${slug}`);
+      const data = response.data.data;
+      setProblem(data.problem);
+      setCode(data.problem.starterCode || '// Write your solution here');
+    } catch (error) {
+      console.error('Error fetching problem:', error);
+      navigate('/problems');
+    } finally {
+      setLoading(false);
     }
-    
-    setCode(starterCode);
-    
-    // Count initial lines
-    const lines = starterCode.split('\n').length;
-    setLineCount(lines);
-    
-  } catch (error) {
-    console.error('Error fetching problem:', error);
-    navigate('/problems');
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newCode = e.target.value;
-    setCode(newCode);
-    const lines = newCode.split('\n').length;
-    setLineCount(lines);
   };
 
   const handleRun = async () => {
@@ -113,7 +74,6 @@ export const ProblemDetail: React.FC = () => {
       const response = await api.post(`/problems/${slug}/submit`, { code });
       setResult(response.data.data);
     } catch (error: any) {
-      console.error('Run error:', error);
       setResult({
         status: 'runtime_error',
         passedTests: 0,
@@ -147,7 +107,6 @@ export const ProblemDetail: React.FC = () => {
         alert(`❌ ${response.data.data.status.replace('_', ' ').toUpperCase()}`);
       }
     } catch (error: any) {
-      console.error('Submit error:', error);
       setResult({
         status: 'runtime_error',
         passedTests: 0,
@@ -178,19 +137,6 @@ export const ProblemDetail: React.FC = () => {
       runtime_error: { icon: <XCircle className="w-5 h-5 text-[#F87171]" />, color: 'text-[#F87171]', text: 'Runtime Error 💥' },
     };
     return statusMap[result.status] || statusMap.runtime_error;
-  };
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleResetCode = () => {
-    const starterCode = problem?.starterCode || DEFAULT_STARTER_CODE;
-    setCode(starterCode);
-    const lines = starterCode.split('\n').length;
-    setLineCount(lines);
   };
 
   if (loading) {
@@ -230,46 +176,6 @@ export const ProblemDetail: React.FC = () => {
               <span className="text-[#5C6360]">{problem.tags?.join(', ') || 'General'}</span>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleRun}
-            disabled={isRunning}
-            className="gap-1"
-          >
-            {isRunning ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Running...
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" />
-                Run
-              </>
-            )}
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="gap-1"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Submit
-              </>
-            )}
-          </Button>
         </div>
       </div>
 
@@ -345,63 +251,22 @@ export const ProblemDetail: React.FC = () => {
         </div>
 
         {/* Right Panel - Code Editor */}
-        <div className="flex flex-col bg-[#0D0F0F]">
-          <div className="bg-[#161A19] border-b border-[#2A302E] px-4 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-[#EDEFEE]">JavaScript</span>
-              <button
-                onClick={handleResetCode}
-                className="text-xs text-[#5C6360] hover:text-[#10B981] transition-colors"
-              >
-                Reset Code
-              </button>
-            </div>
-            <button
-              onClick={handleCopyCode}
-              className="text-[#5C6360] hover:text-[#EDEFEE] transition-colors p-1.5 rounded hover:bg-[#1E2322]"
-              title="Copy code"
-            >
-              {copied ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
-
-          {/* Code Editor with Line Numbers */}
-          <div className="flex-1 bg-[#1E1E1E] overflow-hidden">
-            <div className="flex h-full">
-              {/* Line Numbers */}
-              <div className="bg-[#1E1E1E] text-[#858585] text-sm font-mono py-4 px-3 select-none text-right min-w-[40px] border-r border-[#2A302E]">
-                {Array.from({ length: Math.max(lineCount, 1) }, (_, i) => (
-                  <div key={i + 1} className="leading-6">{i + 1}</div>
-                ))}
-              </div>
-              
-              {/* Code Area */}
-              <textarea
-                value={code}
-                onChange={handleCodeChange}
-                className="flex-1 bg-[#1E1E1E] text-[#D4D4D4] font-mono text-sm resize-none focus:outline-none py-4 px-4 leading-6"
-                placeholder="// Write your solution here..."
-                spellCheck={false}
-                style={{ tabSize: 2 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Tab') {
-                    e.preventDefault();
-                    const start = e.currentTarget.selectionStart;
-                    const end = e.currentTarget.selectionEnd;
-                    const newCode = code.substring(0, start) + '  ' + code.substring(end);
-                    setCode(newCode);
-                    setTimeout(() => {
-                      e.currentTarget.selectionStart = e.currentTarget.selectionEnd = start + 2;
-                    }, 0);
-                  }
-                }}
-              />
-            </div>
-          </div>
+        <div className="flex flex-col bg-[#0D0F0F] p-4">
+          <CodeEditor
+            value={code}
+            onChange={setCode}
+            language="javascript"
+            height="100%"
+            showLineNumbers={true}
+            onRun={handleRun}
+            onSubmit={handleSubmit}
+            isRunning={isRunning}
+            isSubmitting={isSubmitting}
+          />
 
           {/* Result Panel */}
           {result && (
-            <div className="bg-[#161A19] border-t border-[#2A302E] p-4 max-h-48 overflow-y-auto">
+            <div className="mt-4 bg-[#161A19] border border-[#2A302E] rounded-lg p-4 max-h-40 overflow-y-auto">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   {getStatusDisplay()?.icon}

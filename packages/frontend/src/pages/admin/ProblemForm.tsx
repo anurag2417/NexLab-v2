@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, X, Eye, EyeOff } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 
@@ -40,6 +40,8 @@ export const ProblemForm: React.FC = () => {
   const [tagInput, setTagInput] = useState('');
   const [hintInput, setHintInput] = useState('');
   const [constraintInput, setConstraintInput] = useState('');
+  const [showStarterPreview, setShowStarterPreview] = useState(true);
+  const [showSolutionPreview, setShowSolutionPreview] = useState(false);
 
   const { register, control, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<ProblemFormData>({
     resolver: zodResolver(problemSchema),
@@ -50,8 +52,8 @@ export const ProblemForm: React.FC = () => {
       examples: [{ input: '', output: '', explanation: '' }],
       constraints: [],
       testCases: [{ input: '', expectedOutput: '', isHidden: false }],
-      starterCode: 'function solution() {\n  // Write your solution here\n  return 0;\n}',
-      solutionCode: 'function solution() {\n  return 0;\n}',
+      starterCode: '',
+      solutionCode: '',
       hints: [],
       tags: [],
       timeLimit: 2000,
@@ -72,6 +74,8 @@ export const ProblemForm: React.FC = () => {
   const tags = watch('tags') || [];
   const hints = watch('hints') || [];
   const constraints = watch('constraints') || [];
+  const starterCode = watch('starterCode') || '';
+  const solutionCode = watch('solutionCode') || '';
 
   useEffect(() => {
     if (problemId) {
@@ -183,7 +187,7 @@ export const ProblemForm: React.FC = () => {
         {/* Basic Info */}
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6">
           <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Basic Information</h2>
-
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
@@ -293,6 +297,12 @@ export const ProblemForm: React.FC = () => {
               </div>
             </div>
           ))}
+
+          {exampleFields.length === 0 && (
+            <p className="text-[#5C6360] text-sm text-center py-4">
+              No examples added yet. Add an example to help students understand the problem.
+            </p>
+          )}
         </div>
 
         {/* Constraints */}
@@ -386,28 +396,73 @@ export const ProblemForm: React.FC = () => {
               </div>
             </div>
           ))}
+
+          {testCaseFields.length === 0 && (
+            <p className="text-[#5C6360] text-sm text-center py-4">
+              No test cases added yet. Add test cases to validate student solutions.
+            </p>
+          )}
         </div>
 
         {/* Starter & Solution Code */}
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Starter Code */}
             <div>
-              <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Starter Code</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-[#EDEFEE]">Starter Code</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowStarterPreview(!showStarterPreview)}
+                  className="text-xs text-[#5C6360] hover:text-[#10B981] transition-colors flex items-center gap-1"
+                >
+                  {showStarterPreview ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  {showStarterPreview ? 'Hide' : 'Show'} Preview
+                </button>
+              </div>
               <textarea
                 {...register('starterCode')}
                 rows={8}
                 className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] font-mono text-sm"
                 placeholder="function solution() { // Write your solution here }"
               />
+              {showStarterPreview && starterCode && (
+                <div className="mt-3">
+                  <p className="text-xs text-[#5C6360] mb-2">Preview:</p>
+                  <div className="bg-[#1E1E1E] rounded-lg p-3 font-mono text-sm text-[#D4D4D4] max-h-[150px] overflow-y-auto border border-[#2A302E]">
+                    <pre className="whitespace-pre-wrap">{starterCode || '// No starter code yet'}</pre>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Solution Code */}
             <div>
-              <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Solution Code</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-[#EDEFEE]">Solution Code</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowSolutionPreview(!showSolutionPreview)}
+                  className="text-xs text-[#5C6360] hover:text-[#10B981] transition-colors flex items-center gap-1"
+                >
+                  {showSolutionPreview ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  {showSolutionPreview ? 'Hide' : 'Show'} Preview
+                </button>
+              </div>
               <textarea
                 {...register('solutionCode')}
                 rows={8}
                 className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] font-mono text-sm"
                 placeholder="function solution() { return result; }"
               />
+              {showSolutionPreview && solutionCode && (
+                <div className="mt-3">
+                  <p className="text-xs text-[#5C6360] mb-2">Preview:</p>
+                  <div className="bg-[#1E1E1E] rounded-lg p-3 font-mono text-sm text-[#D4D4D4] max-h-[150px] overflow-y-auto border border-[#2A302E]">
+                    <pre className="whitespace-pre-wrap">{solutionCode || '// No solution code yet'}</pre>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -475,6 +530,11 @@ export const ProblemForm: React.FC = () => {
                   </span>
                 ))}
               </div>
+              {tags.length === 0 && (
+                <p className="text-[#5C6360] text-sm text-center py-2">
+                  No tags added. Add tags to help students find this problem.
+                </p>
+              )}
             </div>
           </div>
         </div>
