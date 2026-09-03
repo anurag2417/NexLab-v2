@@ -1,42 +1,149 @@
 import React from 'react';
 import { Button } from './Button';
-import { BookOpen, Clock } from 'lucide-react';
+import { BookOpen, Clock, Users, Star } from 'lucide-react';
 
 interface CourseCardProps {
+  _id?: string;
   title: string;
   description: string;
   progress?: number;
-  image?: string;
+  thumbnail?: string;
+  level?: string;
+  category?: string;
+  price?: number;
+  rating?: number;
+  totalReviews?: number;
+  enrolledStudents?: number;
+  lessonCount?: number;
   onEnroll?: () => void;
   onContinue?: () => void;
+  onLearnMore?: () => void;
   isEnrolled?: boolean;
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({
+  _id,
   title,
   description,
   progress = 0,
-  image,
+  thumbnail,
+  level,
+  category,
+  price = 0,
+  rating,
+  totalReviews = 0,
+  enrolledStudents = 0,
+  lessonCount = 0,
   onEnroll,
   onContinue,
+  onLearnMore,
   isEnrolled = false,
 }) => {
+  const getLevelColor = (level?: string) => {
+    const colors: Record<string, string> = {
+      beginner: 'bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30',
+      intermediate: 'bg-[#60A5FA]/20 text-[#60A5FA] border-[#60A5FA]/30',
+      advanced: 'bg-[#FBBF24]/20 text-[#FBBF24] border-[#FBBF24]/30',
+    };
+    return colors[level || ''] || 'bg-[#2A302E] text-[#9CA3A0] border-[#2A302E]';
+  };
+
+  const getLevelDisplay = (level?: string) => {
+    if (!level) return 'All Levels';
+    return level.charAt(0).toUpperCase() + level.slice(1);
+  };
+
   return (
     <div className="bg-[#161A19] rounded-xl border border-[#2A302E] shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-all duration-300 overflow-hidden group">
-      {/* Image with gradient overlay */}
-      <div 
-        className="h-48 bg-gradient-to-br from-[#10B981]/20 to-[#059669]/10 flex items-center justify-center relative"
-        style={{ backgroundImage: image ? `url(${image})` : undefined }}
-      >
-        {!image && <BookOpen className="w-12 h-12 text-[#10B981] opacity-40" />}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#161A19] to-transparent opacity-60" />
-      </div>
-      
-      <div className="p-5">
-        <h3 className="text-lg font-semibold text-[#EDEFEE] line-clamp-1">{title}</h3>
-        <p className="mt-1 text-sm text-[#9CA3A0] line-clamp-2">{description}</p>
+      {/* Image Section */}
+      <div className="relative">
+        {thumbnail ? (
+          <img
+            src={thumbnail}
+            alt={title}
+            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => {
+              // Fallback if image fails to load
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentElement?.classList.add('bg-gradient-to-br', 'from-[#10B981]/20', 'to-[#059669]/10');
+              e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+            }}
+          />
+        ) : (
+          <div className="h-48 bg-gradient-to-br from-[#10B981]/20 to-[#059669]/10 flex items-center justify-center">
+            <BookOpen className="w-12 h-12 text-[#10B981] opacity-40 fallback-icon" />
+          </div>
+        )}
         
-        {/* Progress Bar */}
+        {/* Rating Badge */}
+        {rating && rating > 0 && (
+          <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#0D0F0F]/80 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-[#2A302E]">
+            <Star className="w-3.5 h-3.5 fill-[#FBBF24] text-[#FBBF24]" />
+            <span className="text-xs font-medium text-[#EDEFEE]">{rating.toFixed(1)}</span>
+            <span className="text-xs text-[#5C6360]">({totalReviews})</span>
+          </div>
+        )}
+        
+        {/* Price Badge */}
+        {price > 0 && (
+          <div className="absolute bottom-3 left-3 bg-[#0D0F0F]/80 backdrop-blur-sm px-3 py-1 rounded-lg border border-[#2A302E]">
+            <span className="text-sm font-bold text-[#10B981]">${price}</span>
+          </div>
+        )}
+        
+        {price === 0 && !isEnrolled && (
+          <div className="absolute bottom-3 left-3 bg-[#0D0F0F]/80 backdrop-blur-sm px-3 py-1 rounded-lg border border-[#2A302E]">
+            <span className="text-sm font-medium text-[#10B981]">Free</span>
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="p-5">
+        {/* Tags */}
+        <div className="flex items-center gap-2 mb-2">
+          {level && (
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${getLevelColor(level)}`}>
+              {getLevelDisplay(level)}
+            </span>
+          )}
+          {category && (
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#2A302E] text-[#9CA3A0] border border-[#2A302E]">
+              {category}
+            </span>
+          )}
+          {lessonCount > 0 && (
+            <span className="text-xs text-[#5C6360]">• {lessonCount} lessons</span>
+          )}
+        </div>
+
+        {/* Title */}
+        <h3 className="text-lg font-semibold text-[#EDEFEE] line-clamp-1 group-hover:text-[#10B981] transition-colors">
+          {title}
+        </h3>
+
+        {/* Description */}
+        <p className="text-sm text-[#9CA3A0] mt-1 line-clamp-2">
+          {description}
+        </p>
+
+        {/* Stats */}
+        <div className="flex items-center gap-3 mt-2 text-xs text-[#5C6360]">
+          {enrolledStudents > 0 && (
+            <span className="flex items-center gap-1">
+              <Users className="w-3.5 h-3.5" />
+              {enrolledStudents} students
+            </span>
+          )}
+          {lessonCount > 0 && (
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {lessonCount} lessons
+            </span>
+          )}
+        </div>
+
+        {/* Progress Bar (if enrolled) */}
         {isEnrolled && (
           <div className="mt-4">
             <div className="flex justify-between text-xs text-[#9CA3A0] mb-1">
@@ -45,29 +152,49 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             </div>
             <div className="w-full h-1.5 bg-[#0D0F0F] rounded-full overflow-hidden">
               <div 
-                className="h-full bg-[#10B981] rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-[#10B981] to-[#34D399] rounded-full transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center text-xs text-[#9CA3A0]">
-            <Clock className="w-3.5 h-3.5 mr-1 text-[#10B981]" />
-            <span>{isEnrolled ? 'Resume' : 'Available'}</span>
-          </div>
+        {/* Actions */}
+        <div className="mt-4 pt-4 border-t border-[#2A302E] flex items-center justify-between">
           {isEnrolled ? (
-            <Button size="sm" variant="outline" onClick={onContinue}>
-              Continue
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onContinue}
+              className="gap-1 w-full"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Continue Learning
             </Button>
           ) : (
-            <Button size="sm" variant="primary" onClick={onEnroll}>
-              Enroll Now
-            </Button>
+            <div className="flex items-center gap-2 w-full">
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={onEnroll}
+                className="flex-1"
+              >
+                Enroll Now
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onLearnMore}
+                className="px-3"
+              >
+                Learn More
+              </Button>
+            </div>
           )}
         </div>
       </div>
     </div>
   );
 };
+
+export default CourseCard;

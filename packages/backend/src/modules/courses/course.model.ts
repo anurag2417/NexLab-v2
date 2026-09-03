@@ -45,7 +45,7 @@ const CourseSchema = new Schema<ICourse>(
     title: { type: String, required: true, trim: true },
     slug: { type: String, unique: true, lowercase: true },
     description: { type: String, required: true },
-    thumbnail: { type: String },
+    thumbnail: { type: String }, // ImageKit URL
     category: { type: String, required: true },
     level: { 
       type: String, 

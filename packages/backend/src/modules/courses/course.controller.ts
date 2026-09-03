@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Types } from 'mongoose';
 import { CourseService } from './course.service.js';
 import { User } from '../auth/auth.model.js';
+import { ImageKitService } from '../../services/imagekit.service.js';
 
 // Import LeaderboardService dynamically to avoid circular dependencies
 const getLeaderboardService = async () => {
@@ -22,6 +23,7 @@ const createCourseSchema = z.object({
   category: z.string(),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
   price: z.number().min(0).default(0),
+  thumbnail: z.string().optional(),
   lessons: z.array(z.object({
     title: z.string(),
     description: z.string().optional(),
@@ -39,9 +41,19 @@ export class CourseController {
   static async create(req: Request, res: Response) {
     try {
       const data = createCourseSchema.parse(req.body);
-      
+
+      // If thumbnail is a base64 string, upload to ImageKit
+      let thumbnailUrl = data.thumbnail;
+      if (data.thumbnail && data.thumbnail.startsWith('data:image')) {
+        const base64Data = data.thumbnail.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        const fileName = `course-${Date.now()}.jpg`;
+        thumbnailUrl = await ImageKitService.uploadImage(buffer, fileName, 'courses');
+      }
+
       const course = await CourseService.createCourse({
         ...data,
+        thumbnail: thumbnailUrl,
         instructor: new Types.ObjectId(req.userId),
       });
 
@@ -87,7 +99,7 @@ export class CourseController {
   static async getAllPublished(req: Request, res: Response) {
     try {
       const { category, level, search } = req.query;
-      
+
       const courses = await CourseService.getCourses({
         category: category as string,
         level: level as string,
@@ -113,7 +125,7 @@ export class CourseController {
   static async getOne(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
+
       const course = await CourseService.getCourseById(id);
       if (!course) {
         return res.status(404).json({
@@ -140,8 +152,21 @@ export class CourseController {
     try {
       const { id } = req.params;
       const data = updateCourseSchema.parse(req.body);
+
+      // If thumbnail is a base64 string, upload to ImageKit
+      let thumbnailUrl = data.thumbnail;
+      if (data.thumbnail && data.thumbnail.startsWith('data:image')) {
+        const base64Data = data.thumbnail.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        const fileName = `course-${Date.now()}.jpg`;
+        thumbnailUrl = await ImageKitService.uploadImage(buffer, fileName, 'courses');
+      }
+
+      const course = await CourseService.updateCourse(id, {
+        ...data,
+        thumbnail: thumbnailUrl,
+      });
       
-      const course = await CourseService.updateCourse(id, data);
       if (!course) {
         return res.status(404).json({
           success: false,
@@ -173,7 +198,7 @@ export class CourseController {
   static async delete(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
+
       const deleted = await CourseService.deleteCourse(id);
       if (!deleted) {
         return res.status(404).json({
@@ -199,7 +224,7 @@ export class CourseController {
   static async togglePublish(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
+
       const course = await CourseService.togglePublish(id);
       if (!course) {
         return res.status(404).json({
@@ -227,7 +252,7 @@ export class CourseController {
     try {
       const limit = parseInt(req.query.limit as string) || 5;
       const courses = await CourseService.getPopularCourses(limit);
-      
+
       res.status(200).json({
         success: true,
         data: courses,
@@ -330,14 +355,14 @@ export class CourseController {
       const progressKey = `progress:${courseId}`;
       const completedLessons = user.progress?.get(progressKey) || [];
       const totalLessons = course.lessons?.length || 0;
-      
+
       res.status(200).json({
         success: true,
         data: {
           completedLessons: completedLessons.length,
           totalLessons: totalLessons,
-          percentage: totalLessons > 0 
-            ? Math.round((completedLessons.length / totalLessons) * 100) 
+          percentage: totalLessons > 0
+            ? Math.round((completedLessons.length / totalLessons) * 100)
             : 0,
           completedLessonIds: completedLessons,
         },
@@ -395,23 +420,23 @@ export class CourseController {
       }
 
       const completedLessons = user.progress.get(progressKey) || [];
-      
+
       // Only process if lesson not already completed
       if (!completedLessons.includes(lessonId)) {
         // Add lesson to completed
         completedLessons.push(lessonId);
         user.progress.set(progressKey, completedLessons);
-        
+
         // Award XP
         const xpGain = 10;
         user.xp = (user.xp || 0) + xpGain;
-        
+
         // Update level
         const newLevel = Math.floor(user.xp / 100) + 1;
         if (newLevel > user.level) {
           user.level = newLevel;
         }
-        
+
         // Save user
         await user.save();
 
@@ -441,8 +466,8 @@ export class CourseController {
       // Get updated progress
       const updatedCompletedLessons = user.progress.get(progressKey) || [];
       const totalLessons = course.lessons?.length || 0;
-      const percentage = totalLessons > 0 
-        ? Math.round((updatedCompletedLessons.length / totalLessons) * 100) 
+      const percentage = totalLessons > 0
+        ? Math.round((updatedCompletedLessons.length / totalLessons) * 100)
         : 0;
 
       res.status(200).json({
@@ -471,12 +496,12 @@ export class CourseController {
   private static async checkBadges(user: any): Promise<void> {
     try {
       const badgesToAward: string[] = [];
-      
+
       // Badge: First Steps - Complete first lesson
       if (user.xp >= 10 && !user.badges?.includes('First Steps')) {
         badgesToAward.push('First Steps');
       }
-      
+
       // Badge: Dedicated Learner - Complete 5 lessons
       let totalLessons = 0;
       if (user.progress) {
@@ -487,17 +512,17 @@ export class CourseController {
       if (totalLessons >= 5 && !user.badges?.includes('Dedicated Learner')) {
         badgesToAward.push('Dedicated Learner');
       }
-      
+
       // Badge: Master Student - Complete 10 lessons
       if (totalLessons >= 10 && !user.badges?.includes('Master Student')) {
         badgesToAward.push('Master Student');
       }
-      
+
       // Badge: Level Up - Reach level 5
       if (user.level >= 5 && !user.badges?.includes('Level Up!')) {
         badgesToAward.push('Level Up!');
       }
-      
+
       // Award badges if any
       if (badgesToAward.length > 0) {
         if (!user.badges) user.badges = [];

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { 
-  Home, BookOpen, Code2, Trophy, User, 
+import {
+  Home, BookOpen, Code2, Trophy, User,
   Users, BarChart3, GraduationCap, LogOut, Menu, X,
   LayoutDashboard, Sparkles
 } from 'lucide-react';
+import { BrandLogo } from '../components/BrandLogo';
 
 // Student Navigation
 const studentNav = [
@@ -47,8 +48,8 @@ export const RootLayout: React.FC = () => {
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="p-2 rounded-lg bg-[#161A19] border border-[#2A302E] shadow-lg"
         >
-          {isSidebarOpen ? 
-            <X className="w-5 h-5 text-[#EDEFEE]" /> : 
+          {isSidebarOpen ?
+            <X className="w-5 h-5 text-[#EDEFEE]" /> :
             <Menu className="w-5 h-5 text-[#EDEFEE]" />
           }
         </button>
@@ -64,12 +65,7 @@ export const RootLayout: React.FC = () => {
       >
         {/* Branding */}
         <div className="px-6 h-16 flex items-center border-b border-[#2A302E] flex-shrink-0">
-          <span className="text-2xl font-bold text-[#10B981]">Nex</span>
-          <span className="text-2xl font-bold text-[#EDEFEE]">Lab</span>
-          <Sparkles className="w-4 h-4 text-[#10B981] ml-1" />
-          <span className="ml-2 text-xs font-medium text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full border border-[#10B981]/20">
-            {isAdmin ? 'Admin' : 'Student'}
-          </span>
+          <BrandLogo size="md" />
         </div>
 
         {/* Navigation */}
@@ -80,8 +76,8 @@ export const RootLayout: React.FC = () => {
               to={item.to}
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200
-                ${isActive 
-                  ? 'bg-[#10B981]/10 text-[#10B981] border-r-2 border-[#10B981]' 
+                ${isActive
+                  ? 'bg-[#10B981]/10 text-[#10B981] border-r-2 border-[#10B981]'
                   : 'text-[#9CA3A0] hover:bg-[#1E2322] hover:text-[#EDEFEE]'
                 }
               `}

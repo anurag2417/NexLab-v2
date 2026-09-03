@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { ImageUpload } from '../../components/ImageUpload';
 
 const courseSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(100),
@@ -13,6 +14,7 @@ const courseSchema = z.object({
   category: z.string().min(1, 'Category is required'),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
   price: z.number().min(0, 'Price must be at least 0'),
+  thumbnail: z.string().optional(),
   lessons: z.array(z.object({
     title: z.string().min(1, 'Lesson title is required'),
     description: z.string().optional(),
@@ -30,8 +32,9 @@ export const CourseForm: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!!id);
+  const [thumbnail, setThumbnail] = useState<string>('');
 
-  const { register, control, handleSubmit, formState: { errors }, reset } = useForm<CourseFormData>({
+  const { register, control, handleSubmit, formState: { errors }, reset, setValue } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
       title: '',
@@ -39,6 +42,7 @@ export const CourseForm: React.FC = () => {
       category: '',
       level: 'beginner',
       price: 0,
+      thumbnail: '',
       lessons: [{ title: '', videoUrl: '', order: 1, isFree: false }],
     },
   });
@@ -55,12 +59,14 @@ export const CourseForm: React.FC = () => {
         try {
           const response = await api.get(`/courses/${id}`);
           const course = response.data.data;
+          setThumbnail(course.thumbnail || '');
           reset({
             title: course.title,
             description: course.description,
             category: course.category,
             level: course.level,
             price: course.price,
+            thumbnail: course.thumbnail || '',
             lessons: course.lessons?.length ? course.lessons : [{ title: '', videoUrl: '', order: 1, isFree: false }],
           });
         } catch (error) {
@@ -196,6 +202,23 @@ export const CourseForm: React.FC = () => {
                 <p className="text-[#F87171] text-xs mt-1">{errors.price.message}</p>
               )}
             </div>
+          </div>
+
+          {/* Image Upload */}
+          <div className="mt-4">
+            <ImageUpload
+              value={thumbnail}
+              onChange={(value) => {
+                setThumbnail(value);
+                setValue('thumbnail', value);
+              }}
+              label="Course Thumbnail"
+              placeholder="Upload a course image..."
+              aspectRatio="16:9"
+            />
+            {errors.thumbnail && (
+              <p className="text-[#F87171] text-xs mt-1">{errors.thumbnail.message}</p>
+            )}
           </div>
         </div>
 
