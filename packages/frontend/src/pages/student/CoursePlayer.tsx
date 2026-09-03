@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, CheckCircle, Lock, BookOpen, Award, Star } from 'lucide-react';
+import { 
+  ArrowLeft, Play, CheckCircle, Lock, BookOpen, Award, Star, Zap,
+  ChevronLeft, ChevronRight
+} from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { CourseReviews } from '../../components/CourseReviews';
+import { QuizModal } from '../../components/QuizModal';
 
 interface Lesson {
   _id: string;
@@ -26,6 +30,16 @@ interface Course {
   totalReviews?: number;
 }
 
+interface Quiz {
+  _id: string;
+  title: string;
+  description?: string;
+  questions: any[];
+  timeLimit?: number;
+  totalQuestions: number;
+  isPublished: boolean;
+}
+
 export const CoursePlayer: React.FC = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -35,6 +49,14 @@ export const CoursePlayer: React.FC = () => {
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
+  
+  // Quiz states
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [completedQuizzes, setCompletedQuizzes] = useState<string[]>([]);
+  const currentLesson = course?.lessons[currentLessonIndex];
 
   useEffect(() => {
     if (courseId) {
@@ -42,6 +64,13 @@ export const CoursePlayer: React.FC = () => {
       fetchProgress();
     }
   }, [courseId]);
+
+  useEffect(() => {
+    if (currentLesson?._id) {
+      fetchQuizzes();
+      checkQuizCompletion();
+    }
+  }, [currentLesson]);
 
   const fetchCourse = async () => {
     try {
@@ -65,6 +94,36 @@ export const CoursePlayer: React.FC = () => {
     }
   };
 
+  const fetchQuizzes = async () => {
+    if (!currentLesson?._id) return;
+    try {
+      const response = await api.get(`/quizzes/lesson/${currentLesson._id}`);
+      const data = response.data.data || [];
+      setQuizzes(data.filter((q: Quiz) => q.isPublished));
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+    }
+  };
+
+  const checkQuizCompletion = async () => {
+    try {
+      const response = await api.get('/quizzes/attempts');
+      const attempts = response.data.data || [];
+      const completed = attempts
+        .filter((a: any) => a.completedAt && a.quizId)
+        .map((a: any) => a.quizId._id || a.quizId);
+      setCompletedQuizzes(completed);
+      
+      // Check if current lesson's quiz is completed
+      if (quizzes.length > 0) {
+        const isCompleted = completed.includes(quizzes[0]._id);
+        setQuizCompleted(isCompleted);
+      }
+    } catch (error) {
+      console.error('Error checking quiz completion:', error);
+    }
+  };
+
   const handleCompleteLesson = async (lessonId: string) => {
     try {
       const response = await api.post(`/courses/${courseId}/${lessonId}/complete`);
@@ -78,6 +137,14 @@ export const CoursePlayer: React.FC = () => {
     } catch (error) {
       console.error('Error completing lesson:', error);
     }
+  };
+
+  const handleQuizComplete = (score: number, passed: boolean) => {
+    setQuizCompleted(true);
+    setCompletedQuizzes([...completedQuizzes, selectedQuizId || '']);
+    // Refresh data
+    fetchCourse();
+    fetchProgress();
   };
 
   const isLessonCompleted = (lessonId: string) => {
@@ -103,9 +170,11 @@ export const CoursePlayer: React.FC = () => {
     );
   }
 
-  const currentLesson = course.lessons[currentLessonIndex];
   const totalLessons = course.lessons.length;
   const completedCount = completedLessons.length;
+
+  // Check if all lessons are completed
+  const allLessonsCompleted = completedCount === totalLessons && totalLessons > 0;
 
   return (
     <div className="max-w-6xl mx-auto py-8">
@@ -146,6 +215,9 @@ export const CoursePlayer: React.FC = () => {
           <span>{completedCount} of {totalLessons} lessons completed</span>
           {xpEarned > 0 && (
             <span className="text-[#10B981] font-medium">+{xpEarned} XP earned!</span>
+          )}
+          {allLessonsCompleted && (
+            <span className="text-[#FBBF24] font-medium">🎉 Course Complete!</span>
           )}
         </div>
       </div>
@@ -262,17 +334,68 @@ export const CoursePlayer: React.FC = () => {
           variant="outline"
           onClick={() => setCurrentLessonIndex(Math.max(0, currentLessonIndex - 1))}
           disabled={currentLessonIndex === 0}
+          className="gap-1"
         >
+          <ChevronLeft className="w-4 h-4" />
           Previous Lesson
         </Button>
         <Button
           variant="primary"
           onClick={() => setCurrentLessonIndex(Math.min(totalLessons - 1, currentLessonIndex + 1))}
           disabled={currentLessonIndex === totalLessons - 1}
+          className="gap-1"
         >
           Next Lesson
+          <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
+
+      {/* Quiz Section */}
+      {quizzes.length > 0 && (
+        <div className="mt-6 p-4 bg-[#161A19] border border-[#2A302E] rounded-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#FBBF24]/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-[#FBBF24]" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#EDEFEE]">Test Your Knowledge</h3>
+                <p className="text-sm text-[#9CA3A0]">
+                  {quizCompleted 
+                    ? 'You have completed this quiz! 🎉' 
+                    : 'Take the quiz to earn extra XP'}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant={quizCompleted ? 'outline' : 'primary'}
+              size="sm"
+              onClick={() => {
+                const quiz = quizzes[0];
+                setSelectedQuizId(quiz._id);
+                setIsQuizModalOpen(true);
+              }}
+              disabled={quizCompleted}
+            >
+              {quizCompleted ? 'Completed ✅' : 'Start Quiz'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Quiz Modal */}
+      {selectedQuizId && currentLesson && (
+        <QuizModal
+          quizId={selectedQuizId}
+          lessonId={currentLesson._id}
+          isOpen={isQuizModalOpen}
+          onClose={() => {
+            setIsQuizModalOpen(false);
+            setSelectedQuizId(null);
+          }}
+          onComplete={handleQuizComplete}
+        />
+      )}
 
       {/* Reviews Section */}
       <div className="mt-8 pt-8 border-t border-[#2A302E]">
@@ -280,7 +403,6 @@ export const CoursePlayer: React.FC = () => {
         <CourseReviews 
           courseId={course._id} 
           onReviewChange={() => {
-            // Refresh course data when review changes
             fetchCourse();
           }}
         />
