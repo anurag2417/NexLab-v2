@@ -15,6 +15,7 @@ import authRoutes from './modules/auth/auth.routes.js';
 import courseRoutes from './modules/courses/course.routes.js';  // ✅ Make sure this exists
 import sandboxRoutes from './modules/sandbox/sandbox.routes.js';
 import leaderboardRoutes from './modules/leaderboard/leaderboard.routes.js';
+import userRoutes from './modules/user/user.routes.js';
 
 // --- Init App ---
 const app = express();
@@ -43,6 +44,7 @@ app.use('/api/courses', courseRoutes);  // ✅ Make sure this line exists
 app.use('/api/sandbox', sandboxRoutes);
 //console.log('✅ Sandbox routes registered at /api/sandbox');
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/users', userRoutes);
 
 // Test auth endpoint (no auth required)
 app.get('/api/test-auth', (req, res) => {

@@ -34,7 +34,7 @@ export const StudentCourses: React.FC = () => {
     try {
       // ✅ Use the published endpoint
       const response = await api.get('/courses/published');
-      console.log('📚 Published courses:', response.data);
+      //console.log('📚 Published courses:', response.data);
       setCourses(response.data.data || []);
     } catch (error) {
       console.error('Error fetching courses:', error);

@@ -1,10 +1,456 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../../stores/authStore';
+import { api } from '../../lib/api';
+import { Button } from '../../components/ui/Button';
+import { 
+  User, Mail, Award, Zap, BookOpen, 
+  Flame, TrendingUp, Edit2, Save, X,
+  CheckCircle, Clock, Calendar,
+  Shield, Crown, Star
+} from 'lucide-react';
+
+interface UserProfile {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  xp: number;
+  level: number;
+  streak: number;
+  badges: string[];
+  enrolledCourses: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface UserStats {
+  totalCourses: number;
+  totalCompletedLessons: number;
+  totalLessons: number;
+  overallProgress: number;
+}
+
+interface CourseProgress {
+  courseId: string;
+  title: string;
+  completedLessons: number;
+  totalLessons: number;
+  percentage: number;
+}
 
 export const Profile: React.FC = () => {
+  const { user, checkAuth } = useAuthStore();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [courseProgress, setCourseProgress] = useState<CourseProgress[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/users/profile');
+      const data = response.data.data;
+      setProfile(data.user);
+      setStats(data.stats);
+      setCourseProgress(data.courseProgress || []);
+      setFormData({
+        name: data.user.name,
+        email: data.user.email,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    setSaveLoading(true);
+    setError('');
+
+    try {
+      const updateData: any = {
+        name: formData.name,
+        email: formData.email,
+      };
+
+      if (formData.currentPassword && formData.newPassword) {
+        updateData.currentPassword = formData.currentPassword;
+        updateData.newPassword = formData.newPassword;
+      }
+
+      await api.put('/users/profile', updateData);
+      await checkAuth();
+      await fetchProfile();
+      setIsEditing(false);
+      alert('Profile updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      setError(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const getBadgeIcon = (badge: string) => {
+    const badgeMap: Record<string, { emoji: string; color: string }> = {
+      'First Steps': { emoji: '🎓', color: 'bg-[#10B981]/20 text-[#10B981]' },
+      'Dedicated Learner': { emoji: '📚', color: 'bg-[#60A5FA]/20 text-[#60A5FA]' },
+      'Master Student': { emoji: '🏆', color: 'bg-[#FBBF24]/20 text-[#FBBF24]' },
+      'Streak Starter': { emoji: '🔥', color: 'bg-[#F87171]/20 text-[#F87171]' },
+      'Code Warrior': { emoji: '⚔️', color: 'bg-[#10B981]/20 text-[#10B981]' },
+      'Quick Learner': { emoji: '⚡', color: 'bg-[#FBBF24]/20 text-[#FBBF24]' },
+      'Level Up!': { emoji: '⬆️', color: 'bg-[#60A5FA]/20 text-[#60A5FA]' },
+    };
+    return badgeMap[badge] || { emoji: '🏅', color: 'bg-[#2A302E]/20 text-[#9CA3A0]' };
+  };
+
+  const getLevelColor = (level: number) => {
+    if (level <= 3) return 'text-[#10B981]';
+    if (level <= 6) return 'text-[#60A5FA]';
+    if (level <= 10) return 'text-[#FBBF24]';
+    return 'text-[#F87171]';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#10B981] border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-[#9CA3A0]">Profile not found</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="py-8">
-      <h1 className="text-2xl font-bold text-text-heading">Your Profile</h1>
-      <p className="text-text-body mt-2">Manage your account settings.</p>
+    <div className="py-8 max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#2A302E]">
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-[#10B981]/20 border-2 border-[#10B981] flex items-center justify-center text-2xl font-bold text-[#10B981]">
+            {profile.name.charAt(0)}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-[#EDEFEE]">{profile.name}</h1>
+            <p className="text-sm text-[#9CA3A0]">{profile.role === 'admin' ? '👑 Administrator' : '🎓 Student'}</p>
+          </div>
+        </div>
+        <Button
+          variant={isEditing ? 'outline' : 'secondary'}
+          onClick={() => {
+            if (isEditing) {
+              setFormData({
+                name: profile.name,
+                email: profile.email,
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: '',
+              });
+              setError('');
+            }
+            setIsEditing(!isEditing);
+          }}
+          className="gap-2"
+        >
+          {isEditing ? (
+            <>
+              <X className="w-4 h-4" />
+              Cancel
+            </>
+          ) : (
+            <>
+              <Edit2 className="w-4 h-4" />
+              Edit Profile
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Edit Form */}
+      {isEditing && (
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 mb-8">
+          <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Edit Profile</h2>
+          
+          {error && (
+            <div className="mb-4 p-3 bg-[#F87171]/10 border border-[#F87171]/20 rounded-lg text-[#F87171] text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">Full Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-[#2A302E]">
+            <p className="text-sm font-medium text-[#9CA3A0] mb-3">Change Password (optional)</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">Current Password</label>
+                <input
+                  type="password"
+                  value={formData.currentPassword}
+                  onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">New Password</label>
+                <input
+                  type="password"
+                  value={formData.newPassword}
+                  onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-4 mt-6">
+            <Button
+              variant="primary"
+              onClick={handleUpdateProfile}
+              disabled={saveLoading}
+              className="gap-2"
+            >
+              <Save className="w-4 h-4" />
+              {saveLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setFormData({
+                  name: profile.name,
+                  email: profile.email,
+                  currentPassword: '',
+                  newPassword: '',
+                  confirmPassword: '',
+                });
+                setError('');
+                setIsEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[#9CA3A0]">Total XP</p>
+              <p className="text-2xl font-bold text-[#10B981]">{profile.xp}</p>
+            </div>
+            <Zap className="w-6 h-6 text-[#10B981] opacity-60" />
+          </div>
+        </div>
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[#9CA3A0]">Level</p>
+              <p className={`text-2xl font-bold ${getLevelColor(profile.level)}`}>{profile.level}</p>
+            </div>
+            <Award className={`w-6 h-6 ${getLevelColor(profile.level)} opacity-60`} />
+          </div>
+        </div>
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[#9CA3A0]">Streak</p>
+              <p className="text-2xl font-bold text-[#FBBF24]">{profile.streak || 0} days</p>
+            </div>
+            <Flame className="w-6 h-6 text-[#FBBF24] opacity-60" />
+          </div>
+        </div>
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[#9CA3A0]">Badges</p>
+              <p className="text-2xl font-bold text-[#60A5FA]">{profile.badges?.length || 0}</p>
+            </div>
+            <Crown className="w-6 h-6 text-[#60A5FA] opacity-60" />
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Overall Progress */}
+        <div className="lg:col-span-2 bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Learning Progress</h2>
+          <div className="mb-6">
+            <div className="flex justify-between text-sm text-[#9CA3A0] mb-1.5">
+              <span>Overall Progress</span>
+              <span className="text-[#10B981] font-semibold">{stats?.overallProgress || 0}%</span>
+            </div>
+            <div className="w-full h-2 bg-[#0D0F0F] rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-[#10B981] to-[#34D399] rounded-full transition-all duration-500"
+                style={{ width: `${stats?.overallProgress || 0}%` }}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-[#0D0F0F] rounded-lg">
+              <p className="text-2xl font-bold text-[#10B981]">{stats?.totalCourses || 0}</p>
+              <p className="text-xs text-[#5C6360]">Enrolled Courses</p>
+            </div>
+            <div className="text-center p-3 bg-[#0D0F0F] rounded-lg">
+              <p className="text-2xl font-bold text-[#60A5FA]">{stats?.totalCompletedLessons || 0}</p>
+              <p className="text-xs text-[#5C6360]">Completed Lessons</p>
+            </div>
+            <div className="text-center p-3 bg-[#0D0F0F] rounded-lg">
+              <p className="text-2xl font-bold text-[#FBBF24]">{stats?.totalLessons || 0}</p>
+              <p className="text-xs text-[#5C6360]">Total Lessons</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Badges</h2>
+          {profile.badges && profile.badges.length > 0 ? (
+            <div className="flex flex-wrap gap-3">
+              {profile.badges.map((badge, index) => {
+                const badgeData = getBadgeIcon(badge);
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg ${badgeData.color}`}
+                    title={badge}
+                  >
+                    <span className="text-xl">{badgeData.emoji}</span>
+                    <span className="text-xs font-medium">{badge}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[#5C6360] text-sm">No badges yet. Keep learning to earn badges!</p>
+          )}
+        </div>
+      </div>
+
+      {/* Course Progress */}
+      {courseProgress.length > 0 && (
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm mb-8">
+          <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Course Progress</h2>
+          <div className="space-y-4">
+            {courseProgress.map((course) => (
+              <div key={course.courseId} className="border-b border-[#2A302E] pb-4 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-[#EDEFEE]">{course.title}</span>
+                  <span className="text-sm text-[#10B981]">{course.percentage}%</span>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-[#5C6360]">
+                  <span>{course.completedLessons} of {course.totalLessons} lessons</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-[#10B981]" />
+                    {course.percentage === 100 ? 'Completed' : 'In Progress'}
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-[#0D0F0F] rounded-full overflow-hidden mt-1.5">
+                  <div 
+                    className="h-full bg-[#10B981] rounded-full transition-all duration-500"
+                    style={{ width: `${course.percentage}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Account Info */}
+      <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Account Information</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-[#5C6360]">Email</p>
+            <p className="text-[#EDEFEE]">{profile.email}</p>
+          </div>
+          <div>
+            <p className="text-[#5C6360]">Role</p>
+            <p className="text-[#EDEFEE] capitalize">{profile.role}</p>
+          </div>
+          <div>
+            <p className="text-[#5C6360]">Member Since</p>
+            <p className="text-[#EDEFEE]">{new Date(profile.createdAt).toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}</p>
+          </div>
+          <div>
+            <p className="text-[#5C6360]">Last Updated</p>
+            <p className="text-[#EDEFEE]">{new Date(profile.updatedAt).toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

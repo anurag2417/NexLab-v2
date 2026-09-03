@@ -389,9 +389,9 @@ export class CourseController {
         // ✅ Update Leaderboard with new XP
         await LeaderboardService.updateUserScore(userId, user.xp);
         
-        console.log(`✅ User ${userId} completed lesson ${lessonId} in course ${courseId}`);
-        console.log(`📊 XP: ${user.xp}, Level: ${user.level}`);
-        console.log(`🏆 Leaderboard updated for user ${userId}`);
+        //console.log(`✅ User ${userId} completed lesson ${lessonId} in course ${courseId}`);
+        //console.log(`📊 XP: ${user.xp}, Level: ${user.level}`);
+        //console.log(`🏆 Leaderboard updated for user ${userId}`);
 
         // Check for badges (optional achievement system)
         await this.checkBadges(user);
@@ -462,7 +462,7 @@ export class CourseController {
         if (!user.badges) user.badges = [];
         user.badges.push(...badgesToAward);
         await user.save();
-        console.log(`🎖️ Badges awarded to ${user._id}: ${badgesToAward.join(', ')}`);
+        //console.log(`🎖️ Badges awarded to ${user._id}: ${badgesToAward.join(', ')}`);
       }
     } catch (error) {
       console.error('Error checking badges:', error);

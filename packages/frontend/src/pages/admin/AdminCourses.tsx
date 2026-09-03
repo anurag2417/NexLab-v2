@@ -37,7 +37,7 @@ export const AdminCourses: React.FC = () => {
     setLoading(true);
     try {
       const response = await api.get('/courses/admin/all');
-      console.log('📚 Admin courses:', response.data);
+      //console.log('📚 Admin courses:', response.data);
       setCourses(response.data.data || []);
     } catch (error) {
       console.error('Error fetching courses:', error);

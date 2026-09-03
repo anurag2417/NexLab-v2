@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-console.log('📡 API URL:', API_URL);
+//console.log('📡 API URL:', API_URL);
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -18,13 +18,13 @@ api.interceptors.request.use(
     // Get token from store
     const token = useAuthStore.getState().token;
     
-    console.log(`🌐 ${config.method?.toUpperCase()} ${config.url}`);
-    console.log('🔑 Token in store:', token ? 'Yes' : 'No');
+    //console.log(`🌐 ${config.method?.toUpperCase()} ${config.url}`);
+    //console.log('🔑 Token in store:', token ? 'Yes' : 'No');
     
     // ALWAYS add Authorization header if token exists
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('✅ Added token to Authorization header');
+      //console.log('✅ Added token to Authorization header');
     } else {
       console.warn('⚠️ No token found in store');
     }
@@ -42,7 +42,7 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (res) => {
-    console.log(`✅ ${res.config.method?.toUpperCase()} ${res.config.url} - ${res.status}`);
+    //console.log(`✅ ${res.config.method?.toUpperCase()} ${res.config.url} - ${res.status}`);
     return res;
   },
   (error) => {

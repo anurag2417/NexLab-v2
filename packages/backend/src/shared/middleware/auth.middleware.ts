@@ -12,9 +12,9 @@ declare global {
 }
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
-  console.log('🔐 Authenticate middleware called');
-  console.log('📋 Authorization header:', req.headers.authorization);
-  console.log('🍪 Cookie header:', req.headers.cookie);
+  //console.log('🔐 Authenticate middleware called');
+  //console.log('📋 Authorization header:', req.headers.authorization);
+  //console.log('🍪 Cookie header:', req.headers.cookie);
 
   // FIRST: Try to get token from Authorization header
   let token = null;
@@ -23,14 +23,14 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     const authHeader = req.headers.authorization;
     if (authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
-      console.log('🔑 Token from Authorization header');
+      //console.log('🔑 Token from Authorization header');
     }
   }
 
   // SECOND: If not in header, try cookie
   if (!token && req.cookies?.token) {
     token = req.cookies.token;
-    console.log('🔑 Token from cookie');
+    //console.log('🔑 Token from cookie');
   }
 
   if (!token) {
@@ -43,7 +43,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string; email: string };
-    console.log('✅ Token verified for user:', decoded.id);
+    //console.log('✅ Token verified for user:', decoded.id);
     req.userId = decoded.id;
     req.userEmail = decoded.email;
     next();

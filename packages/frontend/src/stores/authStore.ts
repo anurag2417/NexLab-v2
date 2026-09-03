@@ -24,21 +24,21 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email, password) => {
         try {
-          console.log('🔐 Attempting login...');
+          //console.log('🔐 Attempting login...');
           const response = await api.post('/auth/login', { email, password });
-          console.log('📥 Login response:', response.data);
+          //console.log('📥 Login response:', response.data);
           
           const { token, user } = response.data;
           
-          console.log('🔑 Token from response:', token ? 'Found' : 'Not found');
+          //console.log('🔑 Token from response:', token ? 'Found' : 'Not found');
           
           set({ 
             user: user,
             token: token
           });
           
-          console.log('✅ User set in store:', user);
-          console.log('✅ Token set in store:', token ? 'Yes' : 'No');
+          //console.log('✅ User set in store:', user);
+          //console.log('✅ Token set in store:', token ? 'Yes' : 'No');
           
           return { success: true };
         } catch (error: any) {
@@ -52,21 +52,21 @@ export const useAuthStore = create<AuthState>()(
 
       register: async (name, email, password) => {
         try {
-          console.log('🔐 Attempting registration...');
+          //console.log('🔐 Attempting registration...');
           const response = await api.post('/auth/register', { name, email, password });
-          console.log('📥 Register response:', response.data);
+          //console.log('📥 Register response:', response.data);
           
           const { token, user } = response.data;
           
-          console.log('🔑 Token from response:', token ? 'Found' : 'Not found');
+          //console.log('🔑 Token from response:', token ? 'Found' : 'Not found');
           
           set({ 
             user: user,
             token: token
           });
           
-          console.log('✅ User set in store:', user);
-          console.log('✅ Token set in store:', token ? 'Yes' : 'No');
+          //console.log('✅ User set in store:', user);
+          //console.log('✅ Token set in store:', token ? 'Yes' : 'No');
           
           return { success: true };
         } catch (error: any) {
@@ -91,7 +91,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           // Get token from store
           const token = get().token;
-          console.log('🔍 Checking auth - token in store:', token ? 'Found' : 'Not found');
+          //console.log('🔍 Checking auth - token in store:', token ? 'Found' : 'Not found');
           
           if (!token) {
             console.warn('⚠️ No token found in store');
@@ -100,7 +100,7 @@ export const useAuthStore = create<AuthState>()(
           }
           
           const response = await api.get('/auth/me');
-          console.log('🔍 Auth check response:', response.data);
+          //console.log('🔍 Auth check response:', response.data);
           
           let userData = response.data.user;
           if (userData && !userData._id && userData.id) {

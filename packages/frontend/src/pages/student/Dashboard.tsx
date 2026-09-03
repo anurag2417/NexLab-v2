@@ -42,9 +42,9 @@ export const StudentDashboard: React.FC = () => {
       const response = await api.get('/courses/published');
       const allCourses = response.data.data || [];
       
-      console.log('📚 All published courses:', allCourses);
-      console.log('👤 User ID:', userId);
-      console.log('📋 User enrolledCourses:', user?.enrolledCourses);
+      //console.log('📚 All published courses:', allCourses);
+      //console.log('👤 User ID:', userId);
+      //console.log('📋 User enrolledCourses:', user?.enrolledCourses);
 
       // Filter courses the user is enrolled in
       const enrolled = allCourses.filter((c: any) => {
@@ -52,16 +52,16 @@ export const StudentDashboard: React.FC = () => {
         const isInUserEnrolled = user?.enrolledCourses?.includes(c._id);
         const isEnrolled = isInEnrolledStudents || isInUserEnrolled;
         
-        console.log(`📚 Course: ${c.title}`, {
-          isInEnrolledStudents,
-          isInUserEnrolled,
-          isEnrolled,
-        });
+        //console.log(`📚 Course: ${c.title}`, {
+        //  isInEnrolledStudents,
+        //  isInUserEnrolled,
+        //  isEnrolled,
+        //});
         
         return isEnrolled;
       });
       
-      console.log('✅ Enrolled courses:', enrolled);
+      //console.log('✅ Enrolled courses:', enrolled);
       setEnrolledCourses(enrolled);
 
       // Fetch progress for each enrolled course

@@ -114,9 +114,9 @@ export class SandboxController {
     const tempDir = path.join(process.cwd(), 'temp');
 
     try {
-      console.log('🏖️ Sandbox execute called');
-      console.log('👤 req.userId:', req.userId);
-      console.log('📦 req.body:', req.body);
+      //console.log('🏖️ Sandbox execute called');
+      //console.log('👤 req.userId:', req.userId);
+      //console.log('📦 req.body:', req.body);
 
       if (!req.userId) {
         console.warn('⚠️ No userId found - authentication failed');
@@ -129,7 +129,7 @@ export class SandboxController {
       const { language, code, stdin } = executeSchema.parse(req.body);
       const userId = req.userId;
 
-      console.log(`📝 Executing ${language} code for user ${userId}`);
+      //console.log(`📝 Executing ${language} code for user ${userId}`);
 
       // Rate Limiting (Redis)
       const rateKey = `sandbox:rate:${userId}`;
@@ -168,7 +168,7 @@ export class SandboxController {
       }
 
       await fs.writeFile(filePath, finalCode, 'utf-8');
-      console.log(`📄 Created temp file: ${filePath}`);
+      //(`📄 Created temp file: ${filePath}`);
 
       let output = '';
       let error = '';
@@ -177,7 +177,7 @@ export class SandboxController {
       // Compile if needed
       if (config.compileCmd) {
         try {
-          console.log(`🔨 Compiling ${language}...`);
+          //console.log(`🔨 Compiling ${language}...`);
           await execAsync(config.compileCmd(filePath), { timeout: 10000 });
         } catch (compileError: any) {
           console.error('Compilation error:', compileError);
@@ -193,7 +193,7 @@ export class SandboxController {
 
       // Execute Code
       try {
-        console.log(`🚀 Executing ${language}...`);
+        //console.log(`🚀 Executing ${language}...`);
         const execOptions = {
           timeout: 5000,
           env: { ...process.env, PATH: process.env.PATH },

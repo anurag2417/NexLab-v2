@@ -135,7 +135,7 @@ export class LeaderboardService {
       }
       await pipeline.exec();
 
-      console.log(`✅ Leaderboard rebuilt with ${users.length} users`);
+      //console.log(`✅ Leaderboard rebuilt with ${users.length} users`);
     } catch (error) {
       console.error('Error rebuilding leaderboard:', error);
     }
