@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { AuthService } from './auth.service.js';
 import { User } from './auth.model.js';
-import { z } from 'zod';
 
 const registerSchema = z.object({
   name: z.string().min(2),
@@ -15,6 +15,7 @@ const loginSchema = z.object({
 });
 
 export class AuthController {
+  // ---------- Register ----------
   static async register(req: Request, res: Response) {
     try {
       const { name, email, password } = registerSchema.parse(req.body);
@@ -30,25 +31,22 @@ export class AuthController {
       const user = await User.create({
         name,
         email,
-        password: password,
+        password,
         role: 'student',
+        isVerified: true, // Auto-verify for now
         xp: 0,
         level: 1,
         streak: 0,
         badges: [],
         enrolledCourses: [],
         progress: new Map(),
+        isActive: true,
       });
 
-      // Generate token
-      const token = AuthService.generateToken(user._id.toString(), user.email);
-      
-      // Set cookie
       AuthService.setTokenCookie(res, user._id.toString(), user.email);
 
       res.status(201).json({
         success: true,
-        token: token, // ✅ Return token in response body
         user: {
           _id: user._id,
           id: user._id,
@@ -59,6 +57,8 @@ export class AuthController {
           level: user.level,
           streak: user.streak,
           badges: user.badges,
+          avatar: user.avatar,
+          isVerified: user.isVerified,
           enrolledCourses: user.enrolledCourses || [],
         },
       });
@@ -86,6 +86,7 @@ export class AuthController {
     }
   }
 
+  // ---------- Login ----------
   static async login(req: Request, res: Response) {
     try {
       const { email, password } = loginSchema.parse(req.body);
@@ -98,6 +99,13 @@ export class AuthController {
         });
       }
 
+      if (!user.isActive) {
+        return res.status(403).json({
+          success: false,
+          message: 'Your account has been deactivated. Please contact support.',
+        });
+      }
+
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
         return res.status(401).json({
@@ -106,15 +114,12 @@ export class AuthController {
         });
       }
 
-      // Generate token
-      const token = AuthService.generateToken(user._id.toString(), user.email);
-      
-      // Set cookie
+      await AuthService.updateStreak(user._id.toString());
+
       AuthService.setTokenCookie(res, user._id.toString(), user.email);
 
       res.status(200).json({
         success: true,
-        token: token, // ✅ Return token in response body
         user: {
           _id: user._id,
           id: user._id,
@@ -125,6 +130,8 @@ export class AuthController {
           level: user.level,
           streak: user.streak,
           badges: user.badges,
+          avatar: user.avatar,
+          isVerified: user.isVerified,
           enrolledCourses: user.enrolledCourses || [],
         },
       });
@@ -145,6 +152,7 @@ export class AuthController {
     }
   }
 
+  // ---------- Logout ----------
   static async logout(req: Request, res: Response) {
     AuthService.clearTokenCookie(res);
     res.status(200).json({
@@ -153,6 +161,7 @@ export class AuthController {
     });
   }
 
+  // ---------- Get Current User ----------
   static async me(req: Request, res: Response) {
     try {
       const user = await User.findById(req.userId).select('-password');
@@ -175,7 +184,12 @@ export class AuthController {
           level: user.level,
           streak: user.streak,
           badges: user.badges,
+          avatar: user.avatar,
+          isVerified: user.isVerified,
           enrolledCourses: user.enrolledCourses || [],
+          loginCount: user.loginCount,
+          lastLoginAt: user.lastLoginAt,
+          createdAt: user.createdAt,
         },
       });
     } catch (error: any) {

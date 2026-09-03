@@ -19,6 +19,7 @@ import userRoutes from './modules/user/user.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 import reviewRoutes from './modules/reviews/review.routes.js';
 import quizRoutes from './modules/quizzes/quiz.routes.js';
+import problemRoutes from './modules/problems/problem.routes.js';
 
 // --- Init App ---
 const app = express();
@@ -44,23 +45,18 @@ app.use(cookieParser());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 
 // 3. Routes
-//console.log('📌 Registering routes...');
 app.use('/api/auth', authRoutes);
-//console.log('✅ Auth routes registered at /api/auth');
 app.use('/api/courses', courseRoutes);  // ✅ Make sure this line exists
-//console.log('✅ Course routes registered at /api/courses');
 app.use('/api/sandbox', sandboxRoutes);
-//console.log('✅ Sandbox routes registered at /api/sandbox');
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/quizzes', quizRoutes);
+app.use('/api/problems', problemRoutes);
 
 // Test auth endpoint (no auth required)
 app.get('/api/test-auth', (req, res) => {
-  //console.log('📥 Test auth endpoint called');
-  //console.log('🍪 Cookies:', req.cookies);
   res.json({ 
     success: true, 
     message: 'API is working!',
@@ -75,7 +71,6 @@ app.get('/api/health', (req, res) => {
 
 // 4. Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  //console.error('❌ Global error:', err);
   logger.error(err.stack);
   res.status(err.status || 500).json({ success: false, message: err.message || 'Internal Server Error' });
 });

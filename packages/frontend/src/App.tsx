@@ -17,6 +17,8 @@ import { Sandbox } from './pages/student/Sandbox';
 import { Leaderboard } from './pages/student/Leaderboard';
 import { Profile } from './pages/student/Profile';
 import { CoursePlayer } from './pages/student/CoursePlayer';
+import { ProblemsList } from './pages/student/ProblemsList';
+import { ProblemDetail } from './pages/student/ProblemDetail';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -24,6 +26,8 @@ import { AdminCourses } from './pages/admin/AdminCourses';
 import { CourseForm } from './pages/admin/CourseForm';
 import { AdminUsers } from './pages/admin/AdminUsers';
 import { AdminAnalytics } from './pages/admin/AdminAnalytics';
+import { AdminProblems } from './pages/admin/AdminProblems';
+import { ProblemForm } from './pages/admin/ProblemForm';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ 
@@ -65,6 +69,8 @@ function App() {
         <Route element={<ProtectedRoute><RootLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<StudentDashboard />} />
           <Route path="/courses" element={<StudentCourses />} />
+          <Route path="/problems" element={<ProblemsList />} />
+          <Route path="/problems/:slug" element={<ProblemDetail />} />
           <Route path="/sandbox" element={<Sandbox />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
@@ -77,6 +83,9 @@ function App() {
           <Route path="/admin/courses" element={<AdminCourses />} />
           <Route path="/admin/courses/create" element={<CourseForm />} />
           <Route path="/admin/courses/edit/:id" element={<CourseForm />} />
+          <Route path="/admin/problems" element={<AdminProblems />} />
+          <Route path="/admin/problems/create" element={<ProblemForm />} />
+          <Route path="/admin/problems/edit/:problemId" element={<ProblemForm />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
         </Route>

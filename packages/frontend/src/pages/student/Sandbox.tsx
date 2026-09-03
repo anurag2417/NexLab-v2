@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Loader2, Terminal, Copy, Check, X } from 'lucide-react'; // ✅ Added 'X' here
+import Editor, { loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 
-const MonacoEditor = React.lazy(() => import('@monaco-editor/react'));
+loader.config({ monaco });
 
 interface Language {
   id: string;
@@ -161,14 +163,14 @@ export const Sandbox: React.FC = () => {
           </div>
 
           <div className="h-[550px] md:h-[650px]">
-            <React.Suspense
+            <div
               fallback={
                 <div className="flex items-center justify-center h-full">
                   <div className="animate-spin rounded-full h-8 w-8 border-4 border-[#10B981] border-t-transparent" />
                 </div>
               }
             >
-              <MonacoEditor
+              <Editor
                 language="javascript"
                 value={code}
                 onChange={(value) => setCode(value || '')}
@@ -185,7 +187,7 @@ export const Sandbox: React.FC = () => {
                   quickSuggestions: true,
                 }}
               />
-            </React.Suspense>
+            </div>
           </div>
         </div>
 
