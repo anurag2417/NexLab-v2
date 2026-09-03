@@ -33,11 +33,11 @@ app.use(cors({
     'https://nexlab-v2.vercel.app',
     'https://nexlab-v2.onrender.com'
   ],
-  credentials: true,
+  credentials: true, // ✅ Must be true
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
   exposedHeaders: ['Set-Cookie'],
-}));
+}))
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
