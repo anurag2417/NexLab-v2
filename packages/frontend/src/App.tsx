@@ -6,7 +6,7 @@ import { useAuthStore } from './stores/authStore';
 import { RootLayout } from './layouts/RootLayout';
 
 // Public Pages
-import { Home } from './pages/Home';
+import { LandingPage } from './pages/LandingPage';
 import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 
@@ -57,7 +57,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
