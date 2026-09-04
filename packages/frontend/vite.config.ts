@@ -7,14 +7,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://nexlab-v2.onrender.com',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
     },
   },
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
+  optimizeDeps: {
+    include: ['monaco-editor'],
   },
 });

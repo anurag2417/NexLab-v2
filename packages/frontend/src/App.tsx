@@ -69,9 +69,9 @@ function App() {
         <Route element={<ProtectedRoute><RootLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<StudentDashboard />} />
           <Route path="/courses" element={<StudentCourses />} />
+          <Route path="/sandbox" element={<Sandbox />} />
           <Route path="/problems" element={<ProblemsList />} />
           <Route path="/problems/:slug" element={<ProblemDetail />} />
-          <Route path="/sandbox" element={<Sandbox />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/course/:courseId" element={<CoursePlayer />} />

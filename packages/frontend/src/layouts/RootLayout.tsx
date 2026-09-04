@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Sparkles
 } from 'lucide-react';
 
-// Student Navigation - Added "Practice Problems"
+// Student Navigation
 const studentNav = [
   { to: '/dashboard', icon: Home, label: 'Dashboard' },
   { to: '/courses', icon: BookOpen, label: 'Browse Courses' },
@@ -17,7 +17,7 @@ const studentNav = [
   { to: '/profile', icon: User, label: 'Profile' },
 ];
 
-// Admin Navigation - Added "Coding Problems"
+// Admin Navigation
 const adminNav = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Overview' },
   { to: '/admin/courses', icon: GraduationCap, label: 'Manage Courses' },
