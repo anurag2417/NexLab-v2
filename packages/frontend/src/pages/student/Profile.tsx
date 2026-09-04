@@ -3,9 +3,10 @@ import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { 
-  Award, Zap, 
-  Flame, Edit2, Save, X,
-  CheckCircle, Crown
+  User, Mail, Award, Zap, BookOpen, 
+  Flame, TrendingUp, Edit2, Save, X,
+  CheckCircle, Clock, Calendar,
+  Shield, Crown, Star, Sparkles
 } from 'lucide-react';
 
 interface UserProfile {
@@ -38,7 +39,7 @@ interface CourseProgress {
 }
 
 export const Profile: React.FC = () => {
-  const { checkAuth } = useAuthStore();
+  const { user, checkAuth } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [courseProgress, setCourseProgress] = useState<CourseProgress[]>([]);
@@ -150,9 +151,9 @@ export const Profile: React.FC = () => {
   }
 
   return (
-    <div className="py-8 max-w-5xl mx-auto">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#2A302E]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-[#2A302E]">
         <div className="flex items-center gap-3">
           <div className="w-14 h-14 rounded-full bg-[#10B981]/20 border-2 border-[#10B981] flex items-center justify-center text-2xl font-bold text-[#10B981]">
             {profile.name.charAt(0)}
@@ -195,7 +196,7 @@ export const Profile: React.FC = () => {
 
       {/* Edit Form */}
       {isEditing && (
-        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 mb-8">
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
           <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Edit Profile</h2>
           
           {error && (
@@ -292,8 +293,8 @@ export const Profile: React.FC = () => {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-[#9CA3A0]">Total XP</p>
@@ -302,7 +303,7 @@ export const Profile: React.FC = () => {
             <Zap className="w-6 h-6 text-[#10B981] opacity-60" />
           </div>
         </div>
-        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-[#9CA3A0]">Level</p>
@@ -311,7 +312,7 @@ export const Profile: React.FC = () => {
             <Award className={`w-6 h-6 ${getLevelColor(profile.level)} opacity-60`} />
           </div>
         </div>
-        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-[#9CA3A0]">Streak</p>
@@ -320,7 +321,7 @@ export const Profile: React.FC = () => {
             <Flame className="w-6 h-6 text-[#FBBF24] opacity-60" />
           </div>
         </div>
-        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-[#10B981]/5 transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-[#9CA3A0]">Badges</p>
@@ -332,9 +333,9 @@ export const Profile: React.FC = () => {
       </div>
 
       {/* Progress Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Overall Progress */}
-        <div className="lg:col-span-2 bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Learning Progress</h2>
           <div className="mb-6">
             <div className="flex justify-between text-sm text-[#9CA3A0] mb-1.5">
@@ -365,8 +366,11 @@ export const Profile: React.FC = () => {
         </div>
 
         {/* Badges */}
-        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Badges</h2>
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-[#10B981]" />
+            Badges
+          </h2>
           {profile.badges && profile.badges.length > 0 ? (
             <div className="flex flex-wrap gap-3">
               {profile.badges.map((badge, index) => {
@@ -391,16 +395,16 @@ export const Profile: React.FC = () => {
 
       {/* Course Progress */}
       {courseProgress.length > 0 && (
-        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm mb-8">
+        <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm mb-6 sm:mb-8">
           <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Course Progress</h2>
           <div className="space-y-4">
             {courseProgress.map((course) => (
               <div key={course.courseId} className="border-b border-[#2A302E] pb-4 last:border-0 last:pb-0">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1">
                   <span className="text-sm font-medium text-[#EDEFEE]">{course.title}</span>
                   <span className="text-sm text-[#10B981]">{course.percentage}%</span>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-[#5C6360]">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-[#5C6360]">
                   <span>{course.completedLessons} of {course.totalLessons} lessons</span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
@@ -421,9 +425,9 @@ export const Profile: React.FC = () => {
       )}
 
       {/* Account Info */}
-      <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
+      <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Account Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-[#5C6360]">Email</p>
             <p className="text-[#EDEFEE]">{profile.email}</p>

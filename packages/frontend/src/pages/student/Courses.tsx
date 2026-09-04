@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Clock, Users, Play, Search, Eye, Star } from 'lucide-react';
+import { BookOpen, Clock, Users, Play, Search, Star, Eye } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../stores/authStore';
@@ -98,11 +98,14 @@ export const StudentCourses: React.FC = () => {
   }
 
   return (
-    <div className="py-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#EDEFEE]">Available Courses</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#EDEFEE] flex items-center gap-2">
+            <BookOpen className="w-8 h-8 text-[#10B981]" />
+            Browse Courses
+          </h1>
           <p className="text-[#9CA3A0] mt-1">Expand your skills with our curated content</p>
         </div>
         <Button
@@ -121,7 +124,7 @@ export const StudentCourses: React.FC = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5C6360]" />
           <input
             type="text"
-            placeholder="Search courses..."
+            placeholder="Search courses by title, category, or description..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
@@ -129,6 +132,7 @@ export const StudentCourses: React.FC = () => {
         </div>
       </div>
 
+      {/* Course Grid */}
       {filteredCourses.length === 0 ? (
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-12 text-center">
           <BookOpen className="w-12 h-12 text-[#10B981] mx-auto mb-4 opacity-40" />
@@ -136,7 +140,7 @@ export const StudentCourses: React.FC = () => {
           <p className="text-[#5C6360] text-sm mt-2">Make sure courses are published in the admin panel.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
           {filteredCourses.map((course) => {
             const isEnrolled = isUserEnrolled(course);
             const lessonCount = course.lessons?.length || 0;
@@ -145,8 +149,9 @@ export const StudentCourses: React.FC = () => {
             return (
               <div
                 key={course._id}
-                className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-shadow"
+                className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-shadow flex flex-col"
               >
+                {/* Thumbnail */}
                 <div className="h-48 bg-gradient-to-br from-[#10B981]/20 to-[#059669]/10 flex items-center justify-center relative">
                   <BookOpen className="w-12 h-12 text-[#10B981] opacity-40" />
                   {course.rating && course.rating > 0 && (
@@ -158,7 +163,7 @@ export const StudentCourses: React.FC = () => {
                   )}
                 </div>
 
-                <div className="p-5">
+                <div className="p-4 sm:p-5 flex flex-col flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${getLevelColor(course.level)}`}>
                       {course.level}
@@ -166,8 +171,8 @@ export const StudentCourses: React.FC = () => {
                     <span className="text-xs text-[#9CA3A0]">• {lessonCount} lessons</span>
                   </div>
 
-                  <h3 className="text-lg font-semibold text-[#EDEFEE]">{course.title}</h3>
-                  <p className="text-sm text-[#9CA3A0] mt-1 line-clamp-2">{course.description}</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-[#EDEFEE] line-clamp-1">{course.title}</h3>
+                  <p className="text-sm text-[#9CA3A0] mt-1 line-clamp-2 flex-1">{course.description}</p>
 
                   {course.rating && course.rating > 0 && (
                     <div className="flex items-center gap-1 mt-2">
@@ -194,7 +199,7 @@ export const StudentCourses: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => navigate(`/course/${course._id}`)}
-                          className="gap-1"
+                          className="gap-1 text-xs"
                         >
                           <Play className="w-3.5 h-3.5" />
                           Continue
@@ -205,7 +210,7 @@ export const StudentCourses: React.FC = () => {
                             size="sm"
                             variant="ghost"
                             onClick={() => handleLearnMore(course)}
-                            className="gap-1"
+                            className="gap-1 text-xs"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             Learn More
@@ -215,6 +220,7 @@ export const StudentCourses: React.FC = () => {
                             variant="primary"
                             onClick={() => handleEnroll(course._id)}
                             disabled={enrolling === course._id}
+                            className="text-xs"
                           >
                             {enrolling === course._id ? 'Enrolling...' : `Enroll ${course.price > 0 ? `$${course.price}` : 'Free'}`}
                           </Button>

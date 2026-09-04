@@ -4,7 +4,7 @@ import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { 
   Crown, Medal, Trophy, Star, 
-  TrendingUp, Users, 
+  TrendingUp, Users, Award, 
   ChevronLeft, ChevronRight 
 } from 'lucide-react';
 
@@ -93,11 +93,11 @@ export const Leaderboard: React.FC = () => {
   }
 
   return (
-    <div className="py-8 max-w-5xl mx-auto">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#2A302E]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-[#2A302E]">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#EDEFEE] flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#EDEFEE] flex items-center gap-2">
             <Trophy className="w-8 h-8 text-[#FBBF24]" />
             Leaderboard
           </h1>
@@ -116,8 +116,8 @@ export const Leaderboard: React.FC = () => {
 
       {/* User's Rank Card */}
       {userRank && (
-        <div className="bg-[#161A19] border border-[#10B981]/20 rounded-xl p-5 mb-8 shadow-sm shadow-[#10B981]/5">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="bg-[#161A19] border border-[#10B981]/20 rounded-xl p-4 sm:p-5 mb-6 sm:mb-8 shadow-sm shadow-[#10B981]/5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-[#10B981]/20 border-2 border-[#10B981] flex items-center justify-center">
                 <span className="text-xl font-bold text-[#10B981]">
@@ -148,7 +148,7 @@ export const Leaderboard: React.FC = () => {
       {/* Leaderboard Table */}
       <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="border-b border-[#2A302E] bg-[#0D0F0F]">
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
@@ -247,11 +247,11 @@ export const Leaderboard: React.FC = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A302E]">
-            <p className="text-sm text-[#5C6360]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#2A302E]">
+            <p className="text-sm text-[#5C6360] order-2 sm:order-1">
               Showing {leaderboard.length} of {totalUsers} students
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 order-1 sm:order-2">
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
@@ -275,7 +275,7 @@ export const Leaderboard: React.FC = () => {
       </div>
 
       {/* Legend */}
-      <div className="mt-6 flex items-center justify-center gap-6 text-xs text-[#5C6360]">
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-[#5C6360]">
         <div className="flex items-center gap-1">
           <Crown className="w-4 h-4 text-[#FBBF24]" />
           <span>Gold</span>

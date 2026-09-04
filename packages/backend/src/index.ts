@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
+// import rateLimit from 'express-rate-limit'; // ✅ Comment out or remove this import
 
 import { env } from './config/env.zod.js';
 import { connectDB } from './config/database.js';
@@ -41,8 +41,8 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
-// 2. Global Rate Limiter
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+// 2. Global Rate Limiter - ✅ REMOVED
+// app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 
 // 3. Routes
 console.log('📌 Registering routes...');

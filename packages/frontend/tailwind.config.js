@@ -34,6 +34,23 @@ export default {
         error: '#F87171',
         warning: '#FBBF24',
         info: '#60A5FA',
+        // Dark Forest Colors
+        dark: {
+          50: '#D6F2DC',
+          100: '#B5E0BF',
+          200: '#94CEA2',
+          300: '#73BC85',
+          400: '#52AA68',
+          500: '#31984B',
+          600: '#1F3725',
+          700: '#182D1E',
+          800: '#132016',
+          900: '#060B07',
+        },
+        forest: {
+          600: '#2F6B44',
+          700: '#244F33',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],

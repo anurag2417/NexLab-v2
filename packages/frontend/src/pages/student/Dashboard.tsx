@@ -7,7 +7,7 @@ import { StatCard } from '../../components/ui/StatCard';
 import { ActivityHeatmap } from '../../components/ActivityHeatmap';
 import { 
   Flame, Zap, Award, BookOpen, TrendingUp, CheckCircle, ArrowRight,
-  Code2, Trophy, Target, Calendar, Clock
+  Code2, Trophy, Target, Calendar, Clock, BarChart3, Brain, Rocket
 } from 'lucide-react';
 
 interface EnrolledCourse {
@@ -105,10 +105,8 @@ export const StudentDashboard: React.FC = () => {
         .filter((s: any) => s.status === 'accepted')
         .map((s: any) => s.problemId?._id || s.problemId);
       
-      // Get unique solved problem IDs
       const uniqueSolved = [...new Set(solvedIds)];
       
-      // Fetch problem details to get difficulty
       const problemsRes = await api.get('/problems');
       const allProblems = problemsRes.data.data || [];
       
@@ -137,19 +135,16 @@ export const StudentDashboard: React.FC = () => {
       const response = await api.get('/problems/submissions');
       const submissions = response.data.data || [];
       
-      // Group submissions by date
       const dateMap: Record<string, number> = {};
       const now = new Date();
       const oneYearAgo = new Date();
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
       
-      // Initialize all dates in the last year with 0
       for (let d = new Date(oneYearAgo); d <= now; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
         dateMap[dateStr] = 0;
       }
       
-      // Count submissions per day
       for (const sub of submissions) {
         if (sub.status === 'accepted') {
           const date = new Date(sub.createdAt || sub.submittedAt);
@@ -167,7 +162,6 @@ export const StudentDashboard: React.FC = () => {
       
       setHeatmapData(heatmapData);
       
-      // Calculate streak
       let streak = 0;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -208,12 +202,6 @@ export const StudentDashboard: React.FC = () => {
     return colors[level] || 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20';
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    if (difficulty === 'easy') return 'text-[#10B981]';
-    if (difficulty === 'medium') return 'text-[#FBBF24]';
-    return 'text-[#F87171]';
-  };
-
   const getStatusIcon = (status: string) => {
     if (status === 'accepted') return '✅';
     if (status === 'wrong_answer') return '❌';
@@ -234,22 +222,22 @@ export const StudentDashboard: React.FC = () => {
   }
 
   return (
-    <div className="py-8 max-w-7xl mx-auto">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1600px] mx-auto">
       {/* Welcome Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#2A302E]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-[#2A302E]">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#EDEFEE]">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#EDEFEE]">
             Welcome back, {user?.name || 'Student'}! 👋
           </h1>
-          <p className="text-[#9CA3A0] mt-1">
+          <p className="text-sm sm:text-base text-[#9CA3A0] mt-1">
             {enrolledCourses.length === 0 
               ? "You haven't enrolled in any courses yet. Start learning today!" 
               : `You're making great progress! Keep up the momentum.`}
           </p>
         </div>
         {user && (
-          <div className="flex items-center gap-3 bg-[#161A19] border border-[#10B981]/20 rounded-lg px-4 py-2.5">
-            <Flame className="w-5 h-5 text-[#10B981]" />
+          <div className="flex items-center gap-3 bg-[#161A19] border border-[#10B981]/20 rounded-lg px-3 sm:px-4 py-2 flex-shrink-0">
+            <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-[#10B981]" />
             <span className="text-sm font-semibold text-[#EDEFEE]">
               {dailyStreak || user.streak || 0} Day Streak
             </span>
@@ -257,75 +245,36 @@ export const StudentDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Stats Grid - Responsive */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <StatCard 
           title="Total XP" 
           value={user?.xp || 0} 
-          icon={<Zap className="w-6 h-6 text-[#10B981]" />} 
+          icon={<Zap className="w-5 h-5 sm:w-6 sm:h-6 text-[#10B981]" />} 
           color="emerald"
         />
         <StatCard 
           title="Level" 
           value={user?.level || 1} 
-          icon={<Award className="w-6 h-6 text-[#60A5FA]" />} 
+          icon={<Award className="w-5 h-5 sm:w-6 sm:h-6 text-[#60A5FA]" />} 
           color="info"
         />
         <StatCard 
           title="Problems Solved" 
           value={problemStats.totalSolved || 0} 
-          icon={<Code2 className="w-6 h-6 text-[#FBBF24]" />} 
+          icon={<Code2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#FBBF24]" />} 
           color="warning"
         />
         <StatCard 
           title="Courses Enrolled" 
           value={enrolledCourses.length} 
-          icon={<BookOpen className="w-6 h-6 text-[#F87171]" />} 
+          icon={<BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-[#F87171]" />} 
           color="error"
         />
       </div>
 
-      {/* ✅ Problem Solving Progress */}
-      <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 mb-8 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <Trophy className="w-5 h-5 text-[#FBBF24]" />
-          <h3 className="text-sm font-medium text-[#EDEFEE]">Problem Solving Progress</h3>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-3 bg-[#0D0F0F] rounded-lg">
-            <div className="text-2xl font-bold text-[#10B981]">{problemStats.easySolved || 0}</div>
-            <div className="text-xs text-[#5C6360]">🟢 Easy</div>
-          </div>
-          <div className="text-center p-3 bg-[#0D0F0F] rounded-lg">
-            <div className="text-2xl font-bold text-[#FBBF24]">{problemStats.mediumSolved || 0}</div>
-            <div className="text-xs text-[#5C6360]">🟡 Medium</div>
-          </div>
-          <div className="text-center p-3 bg-[#0D0F0F] rounded-lg">
-            <div className="text-2xl font-bold text-[#F87171]">{problemStats.hardSolved || 0}</div>
-            <div className="text-xs text-[#5C6360]">🔴 Hard</div>
-          </div>
-        </div>
-        <div className="mt-4">
-          <div className="flex justify-between text-xs text-[#5C6360] mb-1">
-            <span>Total Solved</span>
-            <span className="text-[#EDEFEE]">{problemStats.totalSolved || 0} problems</span>
-          </div>
-          <div className="w-full h-2 bg-[#0D0F0F] rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-[#10B981] via-[#FBBF24] to-[#F87171] rounded-full transition-all duration-500"
-              style={{ width: `${Math.min((problemStats.totalSolved || 0) / 50 * 100, 100)}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ✅ Activity Heatmap */}
-      <div className="mb-8">
-        <ActivityHeatmap data={heatmapData} />
-      </div>
-
       {/* XP Progress Bar */}
-      <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 mb-8 shadow-sm">
+      <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-5 mb-6 sm:mb-8 shadow-sm">
         <div className="flex justify-between text-sm text-[#9CA3A0] mb-1.5">
           <span>Progress to Level {user?.level ? user.level + 1 : 2}</span>
           <span className="text-[#10B981] font-medium">{currentXp} / {nextLevelXp} XP</span>
@@ -338,47 +287,100 @@ export const StudentDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ✅ Recent Submissions */}
-      {recentSubmissions.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-5 h-5 text-[#60A5FA]" />
-            <h2 className="text-lg font-semibold text-[#EDEFEE]">Recent Activity</h2>
-          </div>
-          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl divide-y divide-[#2A302E] shadow-sm">
-            {recentSubmissions.map((sub, index) => (
-              <div key={index} className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">{getStatusIcon(sub.status)}</span>
-                  <div>
-                    <p className="text-sm text-[#EDEFEE]">
-                      {sub.problemId?.title || 'Problem'} 
-                      <span className={`ml-2 text-xs font-medium ${
-                        sub.status === 'accepted' ? 'text-[#10B981]' : 'text-[#F87171]'
-                      }`}>
-                        {sub.status === 'accepted' ? '✅ Solved' : sub.status.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </p>
-                    <div className="flex items-center gap-3 text-xs text-[#5C6360]">
-                      <span>Runtime: {sub.runtime || 0}ms</span>
-                      <span>Memory: {sub.memory || 0}MB</span>
-                      <span>{new Date(sub.createdAt || sub.submittedAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-                <span className="text-xs text-[#5C6360]">
-                  {new Date(sub.createdAt || sub.submittedAt).toLocaleTimeString()}
-                </span>
+      {/* Main Content Grid - 2 Columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {/* Left Column - Problem Solving Progress & Activity Heatmap */}
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          {/* Problem Solving Progress */}
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-[#10B981]" />
+              <h3 className="text-sm font-medium text-[#EDEFEE]">Problem Solving Progress</h3>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="text-center p-2 sm:p-3 bg-[#0D0F0F] rounded-lg">
+                <div className="text-lg sm:text-2xl font-bold text-[#10B981]">{problemStats.easySolved || 0}</div>
+                <div className="text-xs text-[#5C6360]">🟢 Easy</div>
               </div>
-            ))}
+              <div className="text-center p-2 sm:p-3 bg-[#0D0F0F] rounded-lg">
+                <div className="text-lg sm:text-2xl font-bold text-[#FBBF24]">{problemStats.mediumSolved || 0}</div>
+                <div className="text-xs text-[#5C6360]">🟡 Medium</div>
+              </div>
+              <div className="text-center p-2 sm:p-3 bg-[#0D0F0F] rounded-lg">
+                <div className="text-lg sm:text-2xl font-bold text-[#F87171]">{problemStats.hardSolved || 0}</div>
+                <div className="text-xs text-[#5C6360]">🔴 Hard</div>
+              </div>
+            </div>
+            <div className="mt-3 sm:mt-4">
+              <div className="flex justify-between text-xs text-[#5C6360] mb-1">
+                <span>Total Solved</span>
+                <span className="text-[#EDEFEE]">{problemStats.totalSolved || 0} problems</span>
+              </div>
+              <div className="w-full h-2 bg-[#0D0F0F] rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-[#10B981] via-[#FBBF24] to-[#F87171] rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min((problemStats.totalSolved || 0) / 50 * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Activity Heatmap */}
+          <div className="overflow-x-auto">
+            <ActivityHeatmap data={heatmapData} />
           </div>
         </div>
-      )}
 
-      {/* My Courses Section */}
-      <div className="mb-8">
+        {/* Right Column - Recent Activity */}
+        <div className="lg:col-span-1">
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm h-full">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-[#60A5FA]" />
+              <h3 className="text-sm font-medium text-[#EDEFEE]">Recent Activity</h3>
+            </div>
+            {recentSubmissions.length === 0 ? (
+              <p className="text-sm text-[#5C6360] italic">No recent activity</p>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {recentSubmissions.map((sub, index) => (
+                  <div key={index} className="p-3 bg-[#0D0F0F] rounded-lg border border-[#2A302E]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getStatusIcon(sub.status)}</span>
+                        <div>
+                          <p className="text-sm font-medium text-[#EDEFEE]">
+                            {sub.problemId?.title || 'Problem'}
+                          </p>
+                          <span className={`text-xs font-medium ${
+                            sub.status === 'accepted' ? 'text-[#10B981]' : 'text-[#F87171]'
+                          }`}>
+                            {sub.status === 'accepted' ? '✅ Solved' : sub.status.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-[#5C6360]">
+                        {new Date(sub.createdAt || sub.submittedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-[#5C6360]">
+                      <span>Runtime: {sub.runtime || 0}ms</span>
+                      <span>Memory: {sub.memory || 0}MB</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* My Courses Section - Responsive */}
+      <div className="mb-6 sm:mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-[#EDEFEE]">My Learning Paths</h2>
+          <h2 className="text-base sm:text-xl font-semibold text-[#EDEFEE] flex items-center gap-2">
+            <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-[#10B981]" />
+            My Learning Paths
+          </h2>
           {enrolledCourses.length > 0 && (
             <button 
               onClick={() => navigate('/courses')}
@@ -390,8 +392,8 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         {enrolledCourses.length === 0 ? (
-          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-12 text-center">
-            <BookOpen className="w-12 h-12 text-[#10B981] mx-auto mb-4 opacity-40" />
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-8 sm:p-12 text-center">
+            <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 text-[#10B981] mx-auto mb-4 opacity-40" />
             <p className="text-[#9CA3A0]">You haven't enrolled in any courses yet.</p>
             <Button 
               variant="primary" 
@@ -402,7 +404,7 @@ export const StudentDashboard: React.FC = () => {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {enrolledCourses.map((course) => {
               const progress = progressMap[course._id];
               const percentage = progress?.percentage || 0;
@@ -412,11 +414,11 @@ export const StudentDashboard: React.FC = () => {
               return (
                 <div
                   key={course._id}
-                  className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-shadow"
+                  className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-shadow"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${getLevelColor(course.level)}`}>
                           {course.level}
                         </span>
@@ -426,7 +428,7 @@ export const StudentDashboard: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <h3 className="text-lg font-semibold text-[#EDEFEE] truncate">{course.title}</h3>
+                      <h3 className="text-base sm:text-lg font-semibold text-[#EDEFEE] truncate">{course.title}</h3>
                       <p className="text-sm text-[#9CA3A0] truncate">{course.description}</p>
                     </div>
                   </div>
@@ -469,35 +471,35 @@ export const StudentDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Quick Actions - Responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
         <button
           onClick={() => navigate('/problems')}
-          className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 text-center hover:border-[#10B981] transition-colors"
+          className="bg-[#161A19] border border-[#2A302E] rounded-xl p-3 sm:p-4 text-center hover:border-[#10B981] transition-colors"
         >
-          <Code2 className="w-6 h-6 text-[#10B981] mx-auto mb-2" />
-          <span className="text-sm text-[#EDEFEE]">Practice Problems</span>
+          <Code2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#10B981] mx-auto mb-1 sm:mb-2" />
+          <span className="text-xs sm:text-sm text-[#EDEFEE]">Practice Problems</span>
         </button>
         <button
           onClick={() => navigate('/courses')}
-          className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 text-center hover:border-[#10B981] transition-colors"
+          className="bg-[#161A19] border border-[#2A302E] rounded-xl p-3 sm:p-4 text-center hover:border-[#10B981] transition-colors"
         >
-          <BookOpen className="w-6 h-6 text-[#60A5FA] mx-auto mb-2" />
-          <span className="text-sm text-[#EDEFEE]">Browse Courses</span>
+          <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-[#60A5FA] mx-auto mb-1 sm:mb-2" />
+          <span className="text-xs sm:text-sm text-[#EDEFEE]">Browse Courses</span>
         </button>
         <button
           onClick={() => navigate('/leaderboard')}
-          className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 text-center hover:border-[#10B981] transition-colors"
+          className="bg-[#161A19] border border-[#2A302E] rounded-xl p-3 sm:p-4 text-center hover:border-[#10B981] transition-colors"
         >
-          <Trophy className="w-6 h-6 text-[#FBBF24] mx-auto mb-2" />
-          <span className="text-sm text-[#EDEFEE]">Leaderboard</span>
+          <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-[#FBBF24] mx-auto mb-1 sm:mb-2" />
+          <span className="text-xs sm:text-sm text-[#EDEFEE]">Leaderboard</span>
         </button>
         <button
           onClick={() => navigate('/sandbox')}
-          className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 text-center hover:border-[#10B981] transition-colors"
+          className="bg-[#161A19] border border-[#2A302E] rounded-xl p-3 sm:p-4 text-center hover:border-[#10B981] transition-colors"
         >
-          <Zap className="w-6 h-6 text-[#F87171] mx-auto mb-2" />
-          <span className="text-sm text-[#EDEFEE]">Code Sandbox</span>
+          <Rocket className="w-5 h-5 sm:w-6 sm:h-6 text-[#F87171] mx-auto mb-1 sm:mb-2" />
+          <span className="text-xs sm:text-sm text-[#EDEFEE]">Code Sandbox</span>
         </button>
       </div>
     </div>

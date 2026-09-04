@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, CheckCircle, Clock, AlertCircle, Code2, TrendingUp, Filter, ThumbsUp } from 'lucide-react';
+import { Search, CheckCircle, Clock, AlertCircle, Code2, TrendingUp } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../stores/authStore';
@@ -18,13 +18,6 @@ interface Problem {
   isSolved?: boolean;
 }
 
-interface RecommendedProblem {
-  _id: string;
-  title: string;
-  slug: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-}
-
 export const ProblemsList: React.FC = () => {
   const { user } = useAuthStore();
   const [problems, setProblems] = useState<Problem[]>([]);
@@ -35,35 +28,48 @@ export const ProblemsList: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalProblems, setTotalProblems] = useState(0);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'acceptance'>('newest');
-  const [recommendedProblems, setRecommendedProblems] = useState<RecommendedProblem[]>([]);
   const [submissions, setSubmissions] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProblems();
-    fetchSubmissions();
-  }, [currentPage, difficultyFilter, sortBy]);
+  }, [currentPage, difficultyFilter, sortBy, search]);
 
   useEffect(() => {
-    if (problems.length > 0 && submissions.length > 0) {
-      // Mark problems as solved if user has an accepted submission
-      const solvedIds = submissions
-        .filter(s => s.status === 'accepted')
-        .map(s => s.problemId?._id || s.problemId);
-      
+    fetchSubmissions();
+  }, []);
+
+  useEffect(() => {
+    if (submissions.length > 0 && problems.length > 0) {
+      const solvedIds = new Set(
+        submissions
+          .filter(s => s.status === 'accepted')
+          .map(s => s.problemId?._id || s.problemId)
+      );
+
       setProblems(prev => 
         prev.map(p => ({
           ...p,
-          isSolved: solvedIds.includes(p._id),
+          isSolved: solvedIds.has(p._id),
         }))
       );
-      
-      // Generate recommended problems (problems not solved yet)
-      const unsolved = problems.filter(p => !solvedIds.includes(p._id));
-      const recommended = unsolved
-        .sort((a, b) => (a.acceptanceRate || 0) - (b.acceptanceRate || 0))
-        .slice(0, 5);
-      setRecommendedProblems(recommended);
     }
+  }, [submissions, problems.length]);
+
+  const recommendedProblems = useMemo(() => {
+    if (problems.length === 0 || submissions.length === 0) {
+      return [];
+    }
+
+    const solvedIds = new Set(
+      submissions
+        .filter(s => s.status === 'accepted')
+        .map(s => s.problemId?._id || s.problemId)
+    );
+
+    const unsolved = problems.filter(p => !solvedIds.has(p._id));
+    return unsolved
+      .sort((a, b) => (a.acceptanceRate || 0) - (b.acceptanceRate || 0))
+      .slice(0, 5);
   }, [problems, submissions]);
 
   const fetchProblems = async () => {
@@ -147,16 +153,16 @@ export const ProblemsList: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D0F0F] py-8">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="min-h-screen bg-[#0D0F0F] py-4 sm:py-6 lg:py-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#EDEFEE] flex items-center gap-2">
-              <Code2 className="w-8 h-8 text-[#10B981]" />
+            <h1 className="text-xl sm:text-2xl font-bold text-[#EDEFEE] flex items-center gap-2">
+              <Code2 className="w-6 h-6 sm:w-8 sm:h-8 text-[#10B981]" />
               Coding Problems
             </h1>
-            <p className="text-[#9CA3A0] mt-1">
+            <p className="text-sm sm:text-base text-[#9CA3A0] mt-1">
               Solve coding challenges and improve your skills
               {totalProblems > 0 && (
                 <span className="ml-2 text-[#10B981]">({totalProblems} problems)</span>
@@ -164,14 +170,14 @@ export const ProblemsList: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={fetchProblems} className="gap-1">
+            <Button variant="secondary" size="sm" onClick={fetchProblems} className="gap-1 text-xs sm:text-sm">
               🔄 Refresh
             </Button>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        {/* Filters - Responsive */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5C6360]" />
             <input
@@ -182,17 +188,17 @@ export const ProblemsList: React.FC = () => {
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#1A1D1E] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
+              className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-[#1A1D1E] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] text-sm"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={difficultyFilter}
               onChange={(e) => {
                 setDifficultyFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-4 py-2.5 bg-[#1A1D1E] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE]"
+              className="px-3 sm:px-4 py-2 sm:py-2.5 bg-[#1A1D1E] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] text-sm flex-1 sm:flex-none"
             >
               <option value="">All Difficulties</option>
               <option value="easy">🟢 Easy</option>
@@ -205,7 +211,7 @@ export const ProblemsList: React.FC = () => {
                 setSortBy(e.target.value as any);
                 setCurrentPage(1);
               }}
-              className="px-4 py-2.5 bg-[#1A1D1E] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE]"
+              className="px-3 sm:px-4 py-2 sm:py-2.5 bg-[#1A1D1E] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] text-sm flex-1 sm:flex-none"
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
@@ -217,37 +223,37 @@ export const ProblemsList: React.FC = () => {
               setSortBy('newest');
               setCurrentPage(1);
               fetchProblems();
-            }}>
+            }} className="text-xs sm:text-sm">
               Clear
             </Button>
           </div>
         </div>
 
-        {/* Problems Table */}
+        {/* Problems Table - Responsive */}
         {problems.length === 0 ? (
-          <div className="bg-[#1A1D1E] border border-[#2A302E] rounded-xl p-12 text-center">
-            <Code2 className="w-12 h-12 text-[#5C6360] mx-auto mb-4 opacity-40" />
+          <div className="bg-[#1A1D1E] border border-[#2A302E] rounded-xl p-8 sm:p-12 text-center">
+            <Code2 className="w-10 h-10 sm:w-12 sm:h-12 text-[#5C6360] mx-auto mb-4 opacity-40" />
             <p className="text-[#9CA3A0]">No problems found</p>
           </div>
         ) : (
           <div className="bg-[#1A1D1E] border border-[#2A302E] rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="table-wrapper">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b border-[#2A302E] bg-[#0D0F0F]">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
                       Problem
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
                       Difficulty
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
-                      Acceptance Rate
+                    <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
+                      Acceptance
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
+                    <th className="hidden md:table-cell text-left py-2 sm:py-3 px-2 sm:px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
                       Tags
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
+                    <th className="text-right py-2 sm:py-3 px-2 sm:px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
                       Status
                     </th>
                   </tr>
@@ -259,25 +265,25 @@ export const ProblemsList: React.FC = () => {
 
                     return (
                       <tr key={problem._id} className="border-b border-[#2A302E] hover:bg-[#1E2322] transition-colors">
-                        <td className="py-3 px-4">
+                        <td className="py-2 sm:py-3 px-2 sm:px-4">
                           <Link 
                             to={`/problems/${problem.slug}`}
-                            className="text-[#EDEFEE] hover:text-[#10B981] transition-colors font-medium flex items-center gap-2"
+                            className="text-sm sm:text-base text-[#EDEFEE] hover:text-[#10B981] transition-colors font-medium flex items-center gap-2"
                           >
                             {isSolved && (
                               <span className="text-[#10B981]" title="Solved">✅</span>
                             )}
-                            {problem.title}
+                            <span className="truncate max-w-[120px] sm:max-w-none">{problem.title}</span>
                           </Link>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${difficulty.bg} ${difficulty.text}`}>
+                        <td className="py-2 sm:py-3 px-2 sm:px-4">
+                          <span className={`text-xs px-2 sm:px-2.5 py-1 rounded-full font-medium ${difficulty.bg} ${difficulty.text} whitespace-nowrap`}>
                             {getDifficultyLabel(problem.difficulty)}
                           </span>
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-1.5 bg-[#0D0F0F] rounded-full overflow-hidden">
+                        <td className="py-2 sm:py-3 px-2 sm:px-4">
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <div className="w-10 sm:w-16 h-1.5 bg-[#0D0F0F] rounded-full overflow-hidden">
                               <div 
                                 className="h-full bg-[#10B981] rounded-full"
                                 style={{ width: `${problem.acceptanceRate || 0}%` }}
@@ -286,23 +292,23 @@ export const ProblemsList: React.FC = () => {
                             <span className="text-xs text-[#9CA3A0]">{problem.acceptanceRate || 0}%</span>
                           </div>
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="hidden md:table-cell py-2 sm:py-3 px-2 sm:px-4">
                           <div className="flex flex-wrap gap-1">
-                            {problem.tags?.slice(0, 3).map((tag, index) => (
+                            {problem.tags?.slice(0, 2).map((tag, index) => (
                               <span key={index} className="text-xs px-2 py-0.5 rounded bg-[#2A302E] text-[#5C6360]">
                                 {tag}
                               </span>
                             ))}
-                            {problem.tags?.length > 3 && (
+                            {problem.tags?.length > 2 && (
                               <span className="text-xs px-2 py-0.5 rounded bg-[#2A302E] text-[#5C6360]">
-                                +{problem.tags.length - 3}
+                                +{problem.tags.length - 2}
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-2 sm:py-3 px-2 sm:px-4 text-right">
                           <Link to={`/problems/${problem.slug}`}>
-                            <Button variant={isSolved ? 'secondary' : 'primary'} size="sm">
+                            <Button variant={isSolved ? 'secondary' : 'primary'} size="sm" className="text-xs sm:text-sm">
                               {isSolved ? 'Review' : 'Solve'}
                             </Button>
                           </Link>
@@ -316,20 +322,20 @@ export const ProblemsList: React.FC = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A302E]">
-                <p className="text-sm text-[#5C6360]">Page {currentPage} of {totalPages}</p>
-                <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3 sm:px-4 py-3 border-t border-[#2A302E]">
+                <p className="text-sm text-[#5C6360] order-2 sm:order-1">Page {currentPage} of {totalPages}</p>
+                <div className="flex gap-2 order-1 sm:order-2">
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 rounded-lg text-[#9CA3A0] hover:text-[#EDEFEE] hover:bg-[#1E2322] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 rounded-lg text-[#9CA3A0] hover:text-[#EDEFEE] hover:bg-[#1E2322] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-2 rounded-lg text-[#9CA3A0] hover:text-[#EDEFEE] hover:bg-[#1E2322] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="p-2 rounded-lg text-[#9CA3A0] hover:text-[#EDEFEE] hover:bg-[#1E2322] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                   >
                     Next
                   </button>
@@ -339,11 +345,11 @@ export const ProblemsList: React.FC = () => {
           </div>
         )}
 
-        {/* ✅ Recommended Problems */}
+        {/* Recommended Problems */}
         {recommendedProblems.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-[#10B981]" />
+          <div className="mt-6 sm:mt-8">
+            <h2 className="text-base sm:text-lg font-semibold text-[#EDEFEE] mb-3 sm:mb-4 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#10B981]" />
               Recommended Next Problems
             </h2>
             <div className="space-y-2">
@@ -353,7 +359,7 @@ export const ProblemsList: React.FC = () => {
                   to={`/problems/${p.slug}`}
                   className="block p-3 bg-[#1A1D1E] border border-[#2A302E] rounded-lg hover:border-[#10B981] transition-colors"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <span className={`text-sm font-medium ${
                         p.difficulty === 'easy' ? 'text-[#10B981]' :
@@ -364,7 +370,7 @@ export const ProblemsList: React.FC = () => {
                       </span>
                       <span className="text-sm text-[#EDEFEE]">{p.title}</span>
                     </div>
-                    <span className="text-xs text-[#5C6360]">→</span>
+                    <span className="text-xs text-[#5C6360] self-end sm:self-auto">→</span>
                   </div>
                 </Link>
               ))}

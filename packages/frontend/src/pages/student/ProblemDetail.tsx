@@ -5,13 +5,13 @@ import {
   Lightbulb, ChevronDown, ChevronUp, CheckCircle, 
   XCircle, Clock, AlertCircle, Terminal,
   ChevronRight, ChevronLeft, Settings, Maximize2, Minimize2,
-  GripVertical
+  GripVertical, Calendar
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import Editor from '@monaco-editor/react';
 
-// Import all the new components
+// Import components
 import { StatusBar } from '../../components/StatusBar';
 import { TestCaseConsole } from '../../components/TestCaseConsole';
 import { SubmissionHistory } from '../../components/SubmissionHistory';
@@ -72,10 +72,14 @@ export const ProblemDetail: React.FC = () => {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [codeHistory, setCodeHistory] = useState<string[]>([]);
   const [isEditorMaximized, setIsEditorMaximized] = useState(false);
-  const [editorHeight, setEditorHeight] = useState(65); // Percentage
+  const [editorHeight, setEditorHeight] = useState(65);
   
   const outputRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<any>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [leftWidth, setLeftWidth] = useState(40);
 
   // Configure Monaco
   useEffect(() => {
@@ -98,17 +102,42 @@ export const ProblemDetail: React.FC = () => {
     }
   }, [slug]);
 
-  // ✅ Auto-save code to localStorage
+  // Auto-save code to localStorage
   useEffect(() => {
     if (code && slug) {
       const timer = setTimeout(() => {
         localStorage.setItem(`code_${slug}`, code);
-        // Also save to history
         saveCodeHistory(code);
       }, 1000);
       return () => clearTimeout(timer);
     }
   }, [code, slug]);
+
+  // Drag functionality for resizing panels
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const containerWidth = window.innerWidth;
+      const newLeftWidth = (e.clientX / containerWidth) * 100;
+      if (newLeftWidth > 15 && newLeftWidth < 60) {
+        setLeftWidth(newLeftWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   const fetchProblem = async () => {
     setLoading(true);
@@ -117,7 +146,6 @@ export const ProblemDetail: React.FC = () => {
       const data = response.data.data;
       setProblem(data.problem);
       
-      // Load saved code from localStorage
       const savedCode = localStorage.getItem(`code_${slug}`);
       if (savedCode) {
         setCode(savedCode);
@@ -168,12 +196,10 @@ var sumOfTwoNumbers = function(a, b) {
   };
 
   const saveCodeHistory = (newCode: string) => {
-    // Only save if code is different from last saved
     const lastCode = codeHistory[codeHistory.length - 1];
     if (lastCode === newCode) return;
     
     const updatedHistory = [...codeHistory, newCode];
-    // Keep only last 20 versions
     if (updatedHistory.length > 20) {
       updatedHistory.shift();
     }
@@ -351,9 +377,11 @@ var sumOfTwoNumbers = function(a, b) {
     return visibleTestCases.length;
   };
 
+  const difficultyInfo = getDifficultyBadge(problem?.difficulty || 'easy');
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#0D0F0F]">
+      <div className="flex items-center justify-center h-full min-h-screen bg-[#0D0F0F]">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#10B981] border-t-transparent" />
       </div>
     );
@@ -369,8 +397,6 @@ var sumOfTwoNumbers = function(a, b) {
       </div>
     );
   }
-
-  const difficultyInfo = getDifficultyBadge(problem.difficulty);
 
   return (
     <div className="h-screen flex flex-col bg-[#0D0F0F] overflow-hidden">
@@ -403,20 +429,23 @@ var sumOfTwoNumbers = function(a, b) {
         </div>
       </div>
 
-      {/* ✅ MAIN CONTENT - SPLIT VIEW LAYOUT */}
+      {/* ✅ MAIN CONTENT - FULL SCREEN SPLIT VIEW */}
       <div className="flex-1 flex min-h-0">
-        {/* LEFT PANEL - Problem Description */}
-        <div className={`${showDescription ? 'w-2/5' : 'w-0'} flex flex-col bg-[#0D0F0F] border-r border-[#2A302E] transition-all duration-300 overflow-hidden min-h-0`}>
+        {/* LEFT PANEL - Problem Description with Resizable Handle */}
+        <div 
+          className="flex flex-col bg-[#0D0F0F] min-h-0 overflow-hidden"
+          style={{ width: `${leftWidth}%` }}
+        >
           <div className="bg-[#1A1D1E] border-b border-[#2A302E] px-4 py-2 flex items-center justify-between flex-shrink-0">
             <span className="text-sm font-medium text-[#EDEFEE]">Description</span>
             <button onClick={() => setShowDescription(false)} className="text-[#5C6360] hover:text-[#EDEFEE] transition-colors">
-              <ChevronRight className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
-              {/* ✅ Problem Statistics */}
+              {/* Problem Statistics */}
               <div className="flex items-center gap-6 text-sm text-[#5C6360] pb-4 border-b border-[#2A302E]">
                 <div>
                   <span className="font-medium text-[#EDEFEE]">{problem.acceptanceRate || 45.6}%</span>
@@ -475,7 +504,7 @@ var sumOfTwoNumbers = function(a, b) {
                 </div>
               )}
 
-              {/* ✅ Related Topics/Tags */}
+              {/* Related Topics/Tags */}
               {problem.tags && problem.tags.length > 0 && (
                 <div>
                   <h2 className="text-sm font-semibold text-[#5C6360] uppercase tracking-wider mb-3">Related Topics</h2>
@@ -515,13 +544,26 @@ var sumOfTwoNumbers = function(a, b) {
           </div>
         </div>
 
+        {/* ✅ DRAG HANDLE */}
+        <div 
+          className="w-1 flex-shrink-0 bg-[#2A302E] hover:bg-[#10B981] cursor-col-resize transition-colors duration-150 relative group"
+          onMouseDown={() => setIsDragging(true)}
+        >
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-0.5 h-12 bg-[#5C6360] group-hover:bg-[#10B981] rounded-full transition-colors" />
+          </div>
+        </div>
+
         {/* RIGHT PANEL - Code Editor + Output */}
-        <div className={`${showDescription ? 'w-3/5' : 'w-full'} flex flex-col bg-[#0D0F0F] min-h-0`}>
+        <div 
+          className="flex flex-col bg-[#0D0F0F] min-h-0"
+          style={{ width: `${100 - leftWidth}%` }}
+        >
           {/* Editor Header */}
           <div className="bg-[#1A1D1E] border-b border-[#2A302E] px-4 py-2 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <button onClick={() => setShowDescription(true)} className={`text-[#5C6360] hover:text-[#EDEFEE] transition-colors ${showDescription ? 'hidden' : ''}`}>
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" />
               </button>
               <span className="text-sm text-[#9CA3A0]">JavaScript</span>
               <span className="text-xs text-[#5C6360]">• {problem.timeLimit || 2000}ms • {problem.memoryLimit || 256}MB</span>
@@ -555,7 +597,7 @@ var sumOfTwoNumbers = function(a, b) {
             </div>
           )}
 
-          {/* ✅ Code Editor */}
+          {/* Code Editor */}
           <div className="flex-1 min-h-0 bg-[#1E1E1E]">
             <Editor
               height="100%"
@@ -581,7 +623,7 @@ var sumOfTwoNumbers = function(a, b) {
             />
           </div>
 
-          {/* ✅ BOTTOM SECTION - Test Cases & Output */}
+          {/* Bottom Section - Test Cases & Output */}
           <div className="border-t border-[#2A302E] bg-[#1A1D1E] flex-shrink-0" style={{ height: isEditorMaximized ? '0px' : '45%' }}>
             {/* Tabs */}
             <div className="flex border-b border-[#2A302E] bg-[#0D0F0F]">
@@ -619,7 +661,6 @@ var sumOfTwoNumbers = function(a, b) {
             {/* Tab Content */}
             <div className="h-[calc(100%-32px)] overflow-y-auto p-4">
               {activeTab === 'description' ? (
-                // ✅ Test Case Console
                 <TestCaseConsole
                   visibleTestCases={visibleTestCases}
                   result={result}
@@ -630,16 +671,14 @@ var sumOfTwoNumbers = function(a, b) {
                   getTestCaseResult={getTestCaseResult}
                 />
               ) : activeTab === 'submissions' ? (
-                // ✅ Submission History
                 <SubmissionHistory submissions={submissions} getStatusIcon={getStatusIcon} getStatusColor={getStatusColor} />
               ) : (
-                // ✅ Code History
                 <CodeHistory codeHistory={codeHistory} onRestoreCode={setCode} />
               )}
             </div>
           </div>
 
-          {/* ✅ Status Bar */}
+          {/* Status Bar */}
           <StatusBar result={result} problem={problem} />
         </div>
       </div>
