@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Clock, Users, Play, Search, Star, Eye, Filter, X } from 'lucide-react';
+import { BookOpen, Clock, Users, Play, Search, Star, Eye, Filter, X, ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../stores/authStore';
@@ -26,10 +26,6 @@ interface Course {
   coverImage?: string;
 }
 
-interface PublishedCoursesResponse {
-  data: Course[];
-}
-
 export const StudentCourses: React.FC = () => {
   const { user, checkAuth } = useAuthStore();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -50,16 +46,15 @@ export const StudentCourses: React.FC = () => {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const response = await api.get<PublishedCoursesResponse>('/courses/published');
-      const courseData: Course[] = response.data.data || [];
+      const response = await api.get('/courses/published');
+      const courseData = response.data.data || [];
       setCourses(courseData);
       
-      // Extract unique categories
       const uniqueCategories: string[] = [
         ...new Set<string>(
           courseData
-            .map((c: Course): string => c.category)
-            .filter((category: string): category is string => Boolean(category)),
+            .map((c: Course) => c.category)
+            .filter((category: unknown): category is string => typeof category === 'string' && category.length > 0)
         ),
       ];
       setCategories(uniqueCategories);
@@ -90,6 +85,13 @@ export const StudentCourses: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  // ✅ Handle course card click - navigate to course if enrolled
+  const handleCourseClick = (course: Course) => {
+    if (isUserEnrolled(course)) {
+      navigate(`/course/${course._id}`);
+    }
+  };
+
   const isUserEnrolled = (course: Course): boolean => {
     const userId = user?._id || user?.id;
     return (userId ? course.enrolledStudents?.includes(userId) : false) || 
@@ -105,7 +107,6 @@ export const StudentCourses: React.FC = () => {
     return colors[level] || 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20';
   };
 
-  // ✅ Format price in INR
   const formatPrice = (amount: number): string => {
     if (amount === 0) return 'Free';
     return new Intl.NumberFormat('en-IN', {
@@ -115,7 +116,6 @@ export const StudentCourses: React.FC = () => {
     }).format(amount);
   };
 
-  // Filter courses
   const filteredCourses = courses.filter(c => {
     const matchesSearch = c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           c.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -125,14 +125,12 @@ export const StudentCourses: React.FC = () => {
     return matchesSearch && matchesLevel && matchesCategory;
   });
 
-  // Clear all filters
   const clearFilters = () => {
     setSearchTerm('');
     setFilterLevel('');
     setFilterCategory('');
   };
 
-  // Check if any filters are active
   const hasActiveFilters = searchTerm || filterLevel || filterCategory;
 
   if (loading) {
@@ -260,9 +258,12 @@ export const StudentCourses: React.FC = () => {
             return (
               <div
                 key={course._id}
-                className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-shadow flex flex-col group"
+                onClick={() => handleCourseClick(course)}
+                className={`bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-shadow flex flex-col group ${
+                  isEnrolled ? 'cursor-pointer hover:border-[#10B981]/30' : 'cursor-default'
+                }`}
               >
-                {/* Thumbnail - Use coverImage if available, fallback to thumbnail */}
+                {/* Thumbnail */}
                 <div className="h-48 bg-gradient-to-br from-[#10B981]/20 to-[#059669]/10 flex items-center justify-center relative overflow-hidden">
                   {(course.coverImage || course.thumbnail) ? (
                     <img
@@ -279,7 +280,7 @@ export const StudentCourses: React.FC = () => {
                     <BookOpen className="w-12 h-12 text-[#10B981] opacity-40 fallback-icon" />
                   )}
                   
-                  {/* Rating Badge */}
+                  {/* Rating Badge - Keep at top right */}
                   {course.rating && course.rating > 0 && (
                     <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#0D0F0F]/80 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-[#2A302E]">
                       <Star className="w-3.5 h-3.5 fill-[#FBBF24] text-[#FBBF24]" />
@@ -298,6 +299,16 @@ export const StudentCourses: React.FC = () => {
                   {course.price === 0 && !isEnrolled && (
                     <div className="absolute bottom-3 left-3 bg-[#0D0F0F]/80 backdrop-blur-sm px-3 py-1 rounded-lg border border-[#2A302E]">
                       <span className="text-sm font-medium text-[#10B981]">Free</span>
+                    </div>
+                  )}
+
+                  {/* Enrolled Badge */}
+                  {isEnrolled && (
+                    <div className="absolute top-3 left-3 bg-[#10B981]/90 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-[#10B981]/30">
+                      <span className="text-xs font-medium text-white flex items-center gap-1">
+                        <Play className="w-3 h-3" />
+                        Enrolled
+                      </span>
                     </div>
                   )}
                 </div>
@@ -331,49 +342,63 @@ export const StudentCourses: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#2A302E]">
-                    <div className="flex items-center gap-2">
-                      {course.rating && course.rating > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3.5 h-3.5 fill-[#FBBF24] text-[#FBBF24]" />
-                          <span className="text-xs font-medium text-[#EDEFEE]">{course.rating.toFixed(1)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {isEnrolled ? (
+                  {/* ✅ Updated Action Buttons - Full width, side by side */}
+                  <div className="mt-4 pt-4 border-t border-[#2A302E]">
+                    {isEnrolled ? (
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
-                          variant="outline"
-                          onClick={() => navigate(`/course/${course._id}`)}
-                          className="gap-1 text-xs"
+                          variant="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/course/${course._id}`);
+                          }}
+                          className="flex-1 gap-1 text-xs"
                         >
                           <Play className="w-3.5 h-3.5" />
-                          Continue
+                          Learn
                         </Button>
-                      ) : (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleLearnMore(course)}
-                            className="gap-1 text-xs"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            Preview
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={() => handleEnroll(course._id)}
-                            disabled={enrolling === course._id}
-                            className="text-xs"
-                          >
-                            {enrolling === course._id ? 'Enrolling...' : `Enroll ${course.price > 0 ? formatPrice(course.price) : 'Free'}`}
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLearnMore(course);
+                          }}
+                          className="flex-1 gap-1 text-xs"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          More
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEnroll(course._id);
+                          }}
+                          disabled={enrolling === course._id}
+                          className="flex-1 gap-1 text-xs"
+                        >
+                          {enrolling === course._id ? 'Enrolling...' : `Enroll ${course.price > 0 ? formatPrice(course.price) : 'Free'}`}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLearnMore(course);
+                          }}
+                          className="flex-1 gap-1 text-xs"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          More
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
