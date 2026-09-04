@@ -1,3 +1,5 @@
+// packages/backend/src/modules/problems/problem.service.ts
+
 import { Types } from 'mongoose';
 import { Problem, ProblemSubmission, IProblem } from './problem.model.js';
 import { User } from '../auth/auth.model.js';
@@ -69,7 +71,7 @@ export class ProblemService {
     return !!result;
   }
 
-  // ---------- SUBMIT SOLUTION - FIXED ----------
+  // ---------- SUBMIT SOLUTION WITH DETAILED TEST RESULTS ----------
   static async submitSolution(
     problemId: string,
     userId: string,
@@ -81,15 +83,7 @@ export class ProblemService {
     }
 
     const testCases = problem.testCases || [];
-    let passedTests = 0;
-    let totalTests = testCases.length;
-    let status = 'accepted';
-    let errorMessage = '';
-    let runtime = 0;
-    let memory = 0;
     
-    const testResults: any[] = [];
-
     if (testCases.length === 0) {
       return {
         passedTests: 0,
@@ -97,71 +91,102 @@ export class ProblemService {
         status: 'runtime_error',
         runtime: 0,
         memory: 0,
-        errorMessage: 'No test cases defined.',
+        errorMessage: 'No test cases defined for this problem.',
         testResults: [],
       };
     }
 
     console.log(`🔍 Running ${testCases.length} test cases...`);
+    console.log(`📝 Code: ${code.substring(0, 100)}...`);
 
-    for (const testCase of testCases) {
+    // ✅ Run ALL test cases (visible + hidden)
+    const testResults: any[] = [];
+    let passedTests = 0;
+    let totalTests = testCases.length;
+    let status = 'accepted';
+    let errorMessage = '';
+    let totalRuntime = 0;
+    let maxMemory = 0;
+
+    for (let i = 0; i < testCases.length; i++) {
+      const testCase = testCases[i];
       const isHidden = testCase.isHidden || false;
-      const result: any = { 
-        input: testCase.input, 
-        expected: testCase.expectedOutput, 
-        passed: false, 
-        isHidden,
-        got: ''
-      };
       
+      // Create result object for this test case
+      const result: any = {
+        testCaseIndex: i,
+        input: testCase.input,
+        expected: testCase.expectedOutput,
+        got: '',
+        passed: false,
+        isHidden: isHidden,
+        runtime: 0,
+        memory: 0,
+        error: null,
+      };
+
       try {
+        console.log(`🧪 Running test case ${i + 1}/${testCases.length}: input="${testCase.input}"`);
+        
         const execResult = await this.executeCodeDirectly(code, testCase.input);
         
-        runtime += execResult.runtime || 0;
-        memory = Math.max(memory, execResult.memory || 0);
+        result.runtime = execResult.runtime || 0;
+        result.memory = execResult.memory || 0;
+        totalRuntime += result.runtime;
+        maxMemory = Math.max(maxMemory, result.memory);
 
-        const output = execResult.output.trim();
-        const expected = testCase.expectedOutput.trim();
+        // ✅ Get actual output
+        const actualOutput = execResult.output.trim();
+        const expectedOutput = testCase.expectedOutput.trim();
 
-        result.got = output;
-        
-        console.log(`📊 Test: input="${testCase.input}", expected="${expected}", got="${output}"`);
-        console.log(`📊 Comparison: "${output}" === "${expected}" ? ${output === expected}`);
-        
-        if (output !== expected) {
-          status = 'wrong_answer';
-          errorMessage = `Expected: ${expected}, Got: ${output}`;
+        result.got = actualOutput;
+
+        // ✅ Compare outputs
+        if (actualOutput === expectedOutput) {
+          result.passed = true;
+          passedTests++;
+          console.log(`✅ Test case ${i + 1} PASSED`);
+        } else {
           result.passed = false;
-          testResults.push(result);
-          break;
+          status = 'wrong_answer';
+          errorMessage = `Test case ${i + 1} failed. Expected: "${expectedOutput}", Got: "${actualOutput}"`;
+          console.log(`❌ Test case ${i + 1} FAILED`);
         }
 
-        result.passed = true;
         testResults.push(result);
-        passedTests++;
+
       } catch (error: any) {
-        console.error('Test case error:', error);
-        result.got = error.message || 'Error';
+        console.error(`❌ Test case ${i + 1} error:`, error);
+        result.got = 'Error';
         result.passed = false;
+        result.error = error.message || 'Runtime error';
         testResults.push(result);
-        status = 'runtime_error';
-        errorMessage = error.message || 'Runtime error';
-        break;
+        
+        // If this is a visible test case, mark as runtime error
+        if (!isHidden) {
+          status = 'runtime_error';
+          errorMessage = error.message || 'Runtime error occurred';
+        }
       }
     }
 
-    while (testResults.length < testCases.length) {
-      const idx = testResults.length;
-      const tc = testCases[idx];
-      testResults.push({
-        input: tc.input,
-        expected: tc.expectedOutput,
-        got: 'Not executed',
-        passed: false,
-        isHidden: tc.isHidden || false
-      });
+    // Calculate averages
+    const avgRuntime = testResults.length > 0 ? Math.round(totalRuntime / testResults.length) : 0;
+
+    // ✅ Determine final status
+    // Only mark as accepted if ALL test cases passed
+    if (passedTests === totalTests) {
+      status = 'accepted';
+      errorMessage = '';
+    } else if (status === 'accepted') {
+      // If some tests failed but no runtime error
+      status = 'wrong_answer';
+      errorMessage = `${totalTests - passedTests} test case(s) failed`;
     }
 
+    console.log(`📊 Results: ${passedTests}/${totalTests} tests passed, Status: ${status}`);
+
+    // ✅ Save submission to database
     const submission = await ProblemSubmission.create({
       problemId: new Types.ObjectId(problemId),
       userId: new Types.ObjectId(userId),
@@ -170,12 +195,13 @@ export class ProblemService {
       status,
       passedTests,
       totalTests,
-      runtime: Math.round(runtime / Math.max(testCases.length, 1)),
-      memory,
-      errorMessage,
+      runtime: avgRuntime,
+      memory: maxMemory,
+      errorMessage: errorMessage || undefined,
       submittedAt: new Date(),
     });
 
+    // ✅ Award XP if ALL tests passed
     if (status === 'accepted') {
       const xpGain = this.getXpForDifficulty(problem.difficulty);
       const user = await User.findById(userId);
@@ -187,22 +213,43 @@ export class ProblemService {
         }
         await user.save();
         await LeaderboardService.updateUserScore(userId, user.xp);
+        console.log(`🏆 Awarded ${xpGain} XP to user ${userId}`);
       }
     }
 
+    // ✅ Return detailed results
     return {
-      submission,
+      submission: {
+        id: submission._id,
+        status: submission.status,
+        passedTests: submission.passedTests,
+        totalTests: submission.totalTests,
+        runtime: submission.runtime,
+        memory: submission.memory,
+        errorMessage: submission.errorMessage,
+        createdAt: submission.submittedAt,
+      },
+      // ✅ Full test results for display
+      testResults: testResults.map((tr: any) => ({
+        input: tr.input,
+        expected: tr.expected,
+        got: tr.got,
+        passed: tr.passed,
+        isHidden: tr.isHidden,
+        runtime: tr.runtime,
+        memory: tr.memory,
+        error: tr.error,
+      })),
       passedTests,
       totalTests,
       status,
-      runtime: Math.round(runtime / Math.max(testCases.length, 1)),
-      memory,
+      runtime: avgRuntime,
+      memory: maxMemory,
       errorMessage,
-      testResults,
     };
   }
 
-  // ---------- DIRECT CODE EXECUTION - FIXED ----------
+  // ---------- DIRECT CODE EXECUTION ----------
   static async executeCodeDirectly(
     code: string,
     input: string
@@ -216,7 +263,7 @@ export class ProblemService {
     const fileId = randomUUID();
     const filePath = path.join(tempDir, `code_${fileId}.js`);
 
-    // ✅ Detect function name across multiple declaration styles
+    // ✅ Detect function name
     const patterns = [
       /var\s+(\w+)\s*=\s*function/,
       /let\s+(\w+)\s*=\s*function/,
@@ -237,24 +284,29 @@ export class ProblemService {
     }
     
     if (!functionName) {
-      throw new Error('Could not detect a function definition in your code.');
+      throw new Error('Could not detect a function definition in your code. Make sure you define a function.');
     }
 
-    // ✅ Validate input is safe JS
+    // ✅ Validate input
     try {
       new Function(`return [${input}]`)();
     } catch {
       throw new Error(`Test case input is not valid JS arguments: "${input}". Use format like: 5, 10`);
     }
 
-    // ✅ Create the wrapper
+    // ✅ Create wrapper with detailed error handling
     const wrapperCode = `
 ${code}
 
 // ✅ Execute with test values
-const result = ${functionName}(${input});
-// ✅ Ensure clean output - no extra spaces
-console.log(String(result).trim());
+try {
+  const result = ${functionName}(${input});
+  // Ensure clean output
+  console.log(String(result).trim());
+} catch (error) {
+  console.error('Runtime Error:', error.message);
+  process.exit(1);
+}
 `;
     
     await fs.writeFile(filePath, wrapperCode, 'utf-8');

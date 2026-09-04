@@ -1,3 +1,5 @@
+// packages/backend/src/modules/problems/problem.controller.ts
+
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { Types } from 'mongoose';
@@ -244,6 +246,7 @@ export class ProblemController {
     }
   }
 
+  // ✅ UPDATED: Submit Solution with detailed results
   static async submitSolution(req: Request, res: Response) {
     try {
       const { slug } = req.params;
@@ -275,17 +278,28 @@ export class ProblemController {
         });
       }
 
+      // ✅ Get detailed submission results
       const result = await ProblemService.submitSolution(
         problem._id.toString(),
         userId,
         code
       );
 
-      console.log(`✅ Submission result: ${result.status}`);
+      console.log(`✅ Submission result: ${result.status} (${result.passedTests}/${result.totalTests} tests passed)`);
 
       res.status(200).json({
         success: true,
-        data: result,
+        data: {
+          // ✅ Return full results with test details
+          status: result.status,
+          passedTests: result.passedTests,
+          totalTests: result.totalTests,
+          runtime: result.runtime,
+          memory: result.memory,
+          errorMessage: result.errorMessage,
+          testResults: result.testResults || [],
+          submission: result.submission,
+        },
       });
     } catch (error: any) {
       console.error('Submit solution error:', error);

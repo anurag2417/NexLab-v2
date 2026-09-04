@@ -5,7 +5,7 @@ import {
   Lightbulb, ChevronDown, ChevronUp, CheckCircle, 
   XCircle, Clock, AlertCircle, Terminal,
   ChevronRight, ChevronLeft, Settings, Maximize2, Minimize2, X,
-  GripVertical, GripHorizontal
+  GripVertical, GripHorizontal, FileText, History, Layers
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -41,6 +41,9 @@ interface TestResult {
   got: string;
   passed: boolean;
   isHidden: boolean;
+  runtime: number;
+  memory: number;
+  error: string | null;
 }
 
 interface SubmissionResult {
@@ -51,6 +54,16 @@ interface SubmissionResult {
   memory: number;
   errorMessage?: string;
   testResults?: TestResult[];
+  submission?: {
+    id: string;
+    status: string;
+    passedTests: number;
+    totalTests: number;
+    runtime: number;
+    memory: number;
+    errorMessage: string;
+    createdAt: string;
+  };
 }
 
 export const ProblemDetail: React.FC = () => {
@@ -68,24 +81,19 @@ export const ProblemDetail: React.FC = () => {
   const [selectedTestCase, setSelectedTestCase] = useState<number>(0);
   const [fontSize, setFontSize] = useState(14);
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState<'description' | 'submissions' | 'history'>('description');
+  const [activeTab, setActiveTab] = useState<'testcases' | 'submissions' | 'history' | 'results'>('testcases');
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [codeHistory, setCodeHistory] = useState<string[]>([]);
   const [isEditorMaximized, setIsEditorMaximized] = useState(false);
   
-  // ✅ NEW: Split view states for vertical divider (editor vs test cases)
-  const [splitPosition, setSplitPosition] = useState(60); // Editor takes 60% height
+  // Split view states
+  const [splitPosition, setSplitPosition] = useState(60);
   const [isDragging, setIsDragging] = useState(false);
   const [isBottomPanelMaximized, setIsBottomPanelMaximized] = useState(false);
-  
-  // ✅ NEW: Split view states for horizontal divider (description vs editor)
   const [leftWidth, setLeftWidth] = useState(40);
   const [isDraggingHorizontal, setIsDraggingHorizontal] = useState(false);
   
   const outputRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<any>(null);
-  const leftPanelRef = useRef<HTMLDivElement>(null);
-  const rightPanelRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const verticalDragRef = useRef<HTMLDivElement>(null);
   const horizontalDragRef = useRef<HTMLDivElement>(null);
@@ -122,7 +130,14 @@ export const ProblemDetail: React.FC = () => {
     }
   }, [code, slug]);
 
-  // ✅ Vertical Drag Handler (Editor vs Bottom Panel)
+  // ✅ Switch to results tab when submission result is received
+  useEffect(() => {
+    if (result && result.testResults && result.testResults.length > 0) {
+      setActiveTab('results');
+    }
+  }, [result]);
+
+  // Vertical Drag Handler
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging || !containerRef.current) return;
@@ -131,7 +146,6 @@ export const ProblemDetail: React.FC = () => {
       const containerHeight = containerRect.height;
       const mouseY = e.clientY - containerRect.top;
       
-      // Calculate percentage (20% to 80% range)
       let percentage = (mouseY / containerHeight) * 100;
       percentage = Math.max(20, Math.min(80, percentage));
       
@@ -176,7 +190,7 @@ export const ProblemDetail: React.FC = () => {
     };
   }, [isDragging]);
 
-  // ✅ Horizontal Drag Handler (Description vs Editor)
+  // Horizontal Drag Handler
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDraggingHorizontal || !containerRef.current) return;
@@ -351,12 +365,17 @@ var sumOfTwoNumbers = function(a, b) {
       });
 
       const data = response.data.data;
+      
+      // ✅ Store the full result with test details
       setResult({
         ...data,
         testResults: data.testResults || []
       });
       
       await fetchSubmissions();
+      
+      // ✅ Automatically switch to results tab
+      setActiveTab('results');
       
       if (outputRef.current) {
         outputRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -448,6 +467,7 @@ var sumOfTwoNumbers = function(a, b) {
 
   const getTestCaseResult = (index: number) => {
     if (!result?.testResults) return null;
+    // Filter only visible test results
     const visibleResults = result.testResults.filter((r: TestResult) => !r.isHidden);
     return visibleResults[index] || null;
   };
@@ -467,6 +487,12 @@ var sumOfTwoNumbers = function(a, b) {
   // Calculate panel heights
   const editorHeight = isEditorMaximized ? 100 : isBottomPanelMaximized ? 0 : splitPosition;
   const bottomHeight = isBottomPanelMaximized ? 100 : isEditorMaximized ? 0 : 100 - splitPosition;
+
+  // Check if results are available
+  const hasResults = result && result.testResults && result.testResults.length > 0;
+  const allVisiblePassed: boolean = Boolean(
+    hasResults && getPassedVisibleCount() === getTotalVisibleCount()
+  );
 
   if (loading) {
     return (
@@ -548,7 +574,7 @@ var sumOfTwoNumbers = function(a, b) {
         </div>
       </div>
 
-      {/* ✅ MAIN CONTENT - With Draggable Dividers */}
+      {/* Main Content */}
       <div ref={containerRef} className="flex-1 flex min-h-0">
         {/* LEFT PANEL - Problem Description */}
         <div 
@@ -663,7 +689,7 @@ var sumOfTwoNumbers = function(a, b) {
           </div>
         </div>
 
-        {/* ✅ HORIZONTAL DRAG HANDLE (Description vs Editor) */}
+        {/* Horizontal Drag Handle */}
         <div 
           className="w-1 flex-shrink-0 bg-[#2A302E] hover:bg-[#10B981] cursor-col-resize transition-colors duration-150 relative group"
           onMouseDown={() => setIsDraggingHorizontal(true)}
@@ -751,7 +777,7 @@ var sumOfTwoNumbers = function(a, b) {
               />
             </div>
 
-            {/* ✅ VERTICAL DRAG HANDLE (Editor vs Test Cases) - Only show when both visible */}
+            {/* Vertical Drag Handle */}
             {!isEditorMaximized && !isBottomPanelMaximized && (
               <div 
                 ref={verticalDragRef}
@@ -769,7 +795,7 @@ var sumOfTwoNumbers = function(a, b) {
             )}
           </div>
 
-          {/* BOTTOM PANEL - Test Cases & Output */}
+          {/* BOTTOM PANEL - Test Cases & Results */}
           <div 
             className="flex flex-col bg-[#1A1D1E] border-t border-[#2A302E] min-h-0"
             style={{ 
@@ -778,41 +804,69 @@ var sumOfTwoNumbers = function(a, b) {
             }}
           >
             {/* Tabs */}
-            <div className="flex border-b border-[#2A302E] bg-[#0D0F0F] flex-shrink-0">
+            <div className="flex border-b border-[#2A302E] bg-[#0D0F0F] flex-shrink-0 overflow-x-auto">
               <button
-                onClick={() => setActiveTab('description')}
-                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 ${
-                  activeTab === 'description' ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'
+                onClick={() => setActiveTab('testcases')}
+                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'testcases' ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'
                 }`}
               >
+                <Layers className="w-3.5 h-3.5" />
                 Test Cases
+                {hasResults && (
+                  <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
+                    allVisiblePassed ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#F87171]/20 text-[#F87171]'
+                  }`}>
+                    {getPassedVisibleCount()}/{getTotalVisibleCount()}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('results')}
+                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'results' 
+                    ? 'border-[#10B981] text-[#10B981]' 
+                    : hasResults 
+                      ? 'border-[#10B981]/30 text-[#10B981]/70 hover:text-[#EDEFEE]' 
+                      : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Results
+                {hasResults && (
+                  <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
+                    allVisiblePassed ? 'bg-[#10B981]/20 text-[#10B981]' : 'bg-[#F87171]/20 text-[#F87171]'
+                  }`}>
+                    {getPassedVisibleCount()}/{getTotalVisibleCount()}
+                  </span>
+                )}
+                {!hasResults && (
+                  <span className="ml-1 text-[#5C6360]">(Submit to see)</span>
+                )}
               </button>
               <button
                 onClick={() => setActiveTab('submissions')}
-                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 ${
+                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
                   activeTab === 'submissions' ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'
                 }`}
               >
+                <History className="w-3.5 h-3.5" />
                 Submissions ({submissions.length})
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 ${
+                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
                   activeTab === 'history' ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'
                 }`}
               >
+                <Clock className="w-3.5 h-3.5" />
                 Code History
               </button>
-              {result && (
-                <button className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 border-[#10B981] text-[#10B981]`}>
-                  Results
-                </button>
-              )}
             </div>
 
             {/* Tab Content */}
             <div className="flex-1 overflow-y-auto p-4 min-h-0">
-              {activeTab === 'description' ? (
+              {activeTab === 'testcases' && (
                 <TestCaseConsole
                   visibleTestCases={visibleTestCases}
                   result={result}
@@ -822,9 +876,24 @@ var sumOfTwoNumbers = function(a, b) {
                   getTotalVisibleCount={getTotalVisibleCount}
                   getTestCaseResult={getTestCaseResult}
                 />
-              ) : activeTab === 'submissions' ? (
+              )}
+
+              {activeTab === 'results' && (
+                <ResultsTab 
+                  result={result}
+                  visibleTestCases={visibleTestCases}
+                  getTestCaseResult={getTestCaseResult}
+                  getPassedVisibleCount={getPassedVisibleCount}
+                  getTotalVisibleCount={getTotalVisibleCount}
+                  allVisiblePassed={allVisiblePassed}
+                />
+              )}
+
+              {activeTab === 'submissions' && (
                 <SubmissionHistory submissions={submissions} getStatusIcon={getStatusIcon} getStatusColor={getStatusColor} />
-              ) : (
+              )}
+
+              {activeTab === 'history' && (
                 <CodeHistory codeHistory={codeHistory} onRestoreCode={setCode} />
               )}
             </div>
@@ -837,3 +906,200 @@ var sumOfTwoNumbers = function(a, b) {
     </div>
   );
 };
+
+// ✅ NEW: Results Tab Component
+const ResultsTab: React.FC<{
+  result: SubmissionResult | null;
+  visibleTestCases: any[];
+  getTestCaseResult: (index: number) => any;
+  getPassedVisibleCount: () => number;
+  getTotalVisibleCount: () => number;
+  allVisiblePassed: boolean;
+}> = ({
+  result,
+  visibleTestCases,
+  getTestCaseResult,
+  getPassedVisibleCount,
+  getTotalVisibleCount,
+  allVisiblePassed,
+}) => {
+  if (!result) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center text-[#5C6360]">
+        <FileText className="w-12 h-12 mb-4 opacity-40" />
+        <p className="font-medium text-[#9CA3A0]">No results yet</p>
+        <p className="text-sm">Submit your solution to see detailed test results</p>
+      </div>
+    );
+  }
+
+  const passedCount = getPassedVisibleCount();
+  const totalCount = getTotalVisibleCount();
+  const hiddenCount = result.totalTests - totalCount;
+
+  return (
+    <div className="space-y-4">
+      {/* Summary Card */}
+      <div className={`p-4 rounded-lg border ${
+        allVisiblePassed && result.status === 'accepted'
+          ? 'bg-[#10B981]/10 border-[#10B981]/30'
+          : 'bg-[#F87171]/10 border-[#F87171]/30'
+      }`}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            {allVisiblePassed && result.status === 'accepted' ? (
+              <CheckCircle className="w-6 h-6 text-[#10B981]" />
+            ) : (
+              <XCircle className="w-6 h-6 text-[#F87171]" />
+            )}
+            <div>
+              <h3 className="font-semibold text-[#EDEFEE]">
+                {allVisiblePassed && result.status === 'accepted' ? '🎉 All Tests Passed!' : 'Some Tests Failed'}
+              </h3>
+              <p className="text-sm text-[#9CA3A0]">
+                {passedCount} of {totalCount} visible tests passed
+                {hiddenCount > 0 && ` • ${hiddenCount} hidden test(s)`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <div className="text-center">
+              <span className="block text-xs text-[#5C6360]">Runtime</span>
+              <span className="font-medium text-[#EDEFEE]">{result.runtime || 0}ms</span>
+            </div>
+            <div className="text-center">
+              <span className="block text-xs text-[#5C6360]">Memory</span>
+              <span className="font-medium text-[#EDEFEE]">{result.memory || 0}MB</span>
+            </div>
+            <div className="text-center">
+              <span className="block text-xs text-[#5C6360]">Status</span>
+              <span className={`font-medium ${getStatusColor(result.status)}`}>
+                {getStatusText(result.status)}
+              </span>
+            </div>
+          </div>
+        </div>
+        {result.errorMessage && (
+          <div className="mt-3 p-2 bg-[#0D0F0F] rounded-lg border border-[#F87171]/20">
+            <span className="text-xs text-[#F87171]">Error:</span>
+            <pre className="text-sm text-[#F87171] font-mono whitespace-pre-wrap break-all mt-1">
+              {result.errorMessage}
+            </pre>
+          </div>
+        )}
+      </div>
+
+      {/* Test Case Results */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-[#5C6360] uppercase tracking-wider">Test Case Details</span>
+          <span className="text-xs text-[#5C6360]">
+            {passedCount}/{totalCount} passed
+          </span>
+        </div>
+
+        {visibleTestCases.map((testCase, index) => {
+          const testResult = getTestCaseResult(index);
+          const passed = testResult?.passed || false;
+
+          return (
+            <div
+              key={index}
+              className={`p-3 rounded-lg border ${
+                passed
+                  ? 'border-[#10B981]/30 bg-[#10B981]/5'
+                  : 'border-[#F87171]/30 bg-[#F87171]/5'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {passed ? (
+                    <CheckCircle className="w-4 h-4 text-[#10B981]" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-[#F87171]" />
+                  )}
+                  <span className="text-sm font-medium text-[#EDEFEE]">
+                    Test Case {index + 1}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    passed
+                      ? 'bg-[#10B981]/20 text-[#10B981]'
+                      : 'bg-[#F87171]/20 text-[#F87171]'
+                  }`}>
+                    {passed ? 'Passed' : 'Failed'}
+                  </span>
+                </div>
+                {testResult?.runtime !== undefined && (
+                  <span className="text-xs text-[#5C6360]">{testResult.runtime}ms</span>
+                )}
+              </div>
+
+              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                <div className="bg-[#0D0F0F] rounded p-2">
+                  <span className="text-[#5C6360]">Input:</span>
+                  <pre className="text-[#EDEFEE] font-mono mt-0.5 whitespace-pre-wrap break-all">
+                    {testCase.input}
+                  </pre>
+                </div>
+                <div className="bg-[#0D0F0F] rounded p-2">
+                  <span className="text-[#5C6360]">Expected:</span>
+                  <pre className="text-[#10B981] font-mono mt-0.5 whitespace-pre-wrap break-all">
+                    {testCase.expectedOutput}
+                  </pre>
+                </div>
+                {testResult && (
+                  <div className="bg-[#0D0F0F] rounded p-2 md:col-span-2">
+                    <span className="text-[#5C6360]">Your Output:</span>
+                    <pre className={`font-mono mt-0.5 whitespace-pre-wrap break-all ${
+                      passed ? 'text-[#10B981]' : 'text-[#F87171]'
+                    }`}>
+                      {testResult.got || 'No output'}
+                    </pre>
+                  </div>
+                )}
+                {testResult?.error && (
+                  <div className="bg-[#F87171]/10 rounded p-2 md:col-span-2 border border-[#F87171]/20">
+                    <span className="text-[#F87171]">Error:</span>
+                    <pre className="text-[#F87171] font-mono mt-0.5 whitespace-pre-wrap break-all">
+                      {testResult.error}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {hiddenCount > 0 && (
+          <div className="p-3 bg-[#0D0F0F] rounded-lg border border-[#2A302E] text-center">
+            <span className="text-xs text-[#5C6360]">
+              🔒 {hiddenCount} hidden test case(s) not shown
+              {result.status === 'accepted' && ' (All passed!)'}
+              {result.status === 'wrong_answer' && passedCount === totalCount && ' (Some hidden tests failed)'}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const getStatusColor = (status: string) => {
+  if (status === 'accepted') return 'text-[#10B981]';
+  if (status === 'wrong_answer' || status === 'runtime_error' || status === 'compile_error') return 'text-[#F87171]';
+  return 'text-[#FBBF24]';
+};
+
+const getStatusText = (status: string) => {
+  const texts: Record<string, string> = {
+    accepted: 'Accepted ✅',
+    wrong_answer: 'Wrong Answer ❌',
+    time_limit: 'Time Limit Exceeded ⏱️',
+    memory_limit: 'Memory Limit Exceeded 💾',
+    runtime_error: 'Runtime Error 💥',
+    compile_error: 'Compile Error 🔧',
+  };
+  return texts[status] || status;
+};
+
+export default ProblemDetail;

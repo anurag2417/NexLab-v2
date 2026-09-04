@@ -1,15 +1,24 @@
+// packages/backend/src/modules/problems/problem.routes.ts
+
 import express from 'express';
 import { ProblemController } from './problem.controller.js';
+import { ProblemImportController } from './problem.import.controller.js';
 import { authenticate } from '../../shared/middleware/auth.middleware.js';
 import { isAdmin } from '../../shared/middleware/admin.middleware.js';
 
 const router = express.Router();
 
+// ---------- Import Routes (Admin Only) ----------
+router.get('/import/template', authenticate, isAdmin, ProblemImportController.getTemplate);
+router.post('/import/validate', authenticate, isAdmin, ProblemImportController.validateJSON);
+router.post('/import/bulk', authenticate, isAdmin, ProblemImportController.importProblems);
+router.post('/export', authenticate, isAdmin, ProblemImportController.exportProblems);
+
 // ---------- Student Routes ----------
 // Get all problems (published only)
 router.get('/', ProblemController.getProblems);
 
-// ✅ Get user's submissions - MUST BE BEFORE /:slug ROUTE
+// Get user's submissions
 router.get('/submissions', authenticate, ProblemController.getSubmissions);
 
 // Get problem by slug

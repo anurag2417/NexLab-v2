@@ -1,3 +1,5 @@
+// packages/frontend/src/App.tsx
+
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
@@ -28,6 +30,7 @@ import { AdminUsers } from './pages/admin/AdminUsers';
 import { AdminAnalytics } from './pages/admin/AdminAnalytics';
 import { AdminProblems } from './pages/admin/AdminProblems';
 import { ProblemForm } from './pages/admin/ProblemForm';
+import { AdminBulkImport } from './pages/admin/AdminBulkImport'; // ✅ ADD THIS
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ 
@@ -86,6 +89,7 @@ function App() {
           <Route path="/admin/problems" element={<AdminProblems />} />
           <Route path="/admin/problems/create" element={<ProblemForm />} />
           <Route path="/admin/problems/edit/:problemId" element={<ProblemForm />} />
+          <Route path="/admin/problems/import" element={<AdminBulkImport />} /> {/* ✅ ADD THIS */}
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
         </Route>
