@@ -1,36 +1,25 @@
 import axios from 'axios';
-import { useAuthStore } from '../stores/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-//console.log('📡 API URL:', API_URL);
+// Use the full URL for production
+const API_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? 'https://nexlab-v2.onrender.com/api' : '/api');
+
+console.log('📡 API URL:', API_URL);
 
 export const api = axios.create({
   baseURL: API_URL,
-  withCredentials: true,
+  withCredentials: true, // ✅ This sends cookies with requests
   headers: { 
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor - ALWAYS add token from store
+// Request interceptor - log requests
 api.interceptors.request.use(
   (config) => {
-    // Get token from store
-    const token = useAuthStore.getState().token;
-    
-    //console.log(`🌐 ${config.method?.toUpperCase()} ${config.url}`);
-    //console.log('🔑 Token in store:', token ? 'Yes' : 'No');
-    
-    // ALWAYS add Authorization header if token exists
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      //console.log('✅ Added token to Authorization header');
-    } else {
-      console.warn('⚠️ No token found in store');
-    }
-    
+    console.log(`🌐 ${config.method?.toUpperCase()} ${config.url}`);
+    // ✅ Always send with credentials
     config.withCredentials = true;
-    
     return config;
   },
   (error) => {
@@ -42,7 +31,7 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (res) => {
-    //console.log(`✅ ${res.config.method?.toUpperCase()} ${res.config.url} - ${res.status}`);
+    console.log(`✅ ${res.config.method?.toUpperCase()} ${res.config.url} - ${res.status}`);
     return res;
   },
   (error) => {
@@ -52,7 +41,6 @@ api.interceptors.response.use(
       data: error.response?.data,
     });
 
-    // Only logout on 401 from non-auth endpoints
     const isAuthEndpoint = error.config?.url?.includes('/auth/');
     const isLoginPage = window.location.pathname === '/login';
     const isRegisterPage = window.location.pathname === '/register';

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Plus, Trash2, X, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 
@@ -18,7 +18,7 @@ const problemSchema = z.object({
   })),
   constraints: z.array(z.string()).default([]),
   testCases: z.array(z.object({
-    input: z.string().min(1, 'Input is required'),
+    input: z.string().min(1, 'Input is required (e.g., 5, 10)'),
     expectedOutput: z.string().min(1, 'Expected output is required'),
     isHidden: z.boolean().default(false),
   })),
@@ -37,11 +37,6 @@ export const ProblemForm: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!!problemId);
-  const [tagInput, setTagInput] = useState('');
-  const [hintInput, setHintInput] = useState('');
-  const [constraintInput, setConstraintInput] = useState('');
-  const [showStarterPreview, setShowStarterPreview] = useState(true);
-  const [showSolutionPreview, setShowSolutionPreview] = useState(false);
 
   const { register, control, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<ProblemFormData>({
     resolver: zodResolver(problemSchema),
@@ -74,8 +69,6 @@ export const ProblemForm: React.FC = () => {
   const tags = watch('tags') || [];
   const hints = watch('hints') || [];
   const constraints = watch('constraints') || [];
-  const starterCode = watch('starterCode') || '';
-  const solutionCode = watch('solutionCode') || '';
 
   useEffect(() => {
     if (problemId) {
@@ -128,9 +121,10 @@ export const ProblemForm: React.FC = () => {
   };
 
   const addTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setValue('tags', [...tags, tagInput.trim()]);
-      setTagInput('');
+    const input = document.getElementById('tagInput') as HTMLInputElement;
+    if (input && input.value.trim() && !tags.includes(input.value.trim())) {
+      setValue('tags', [...tags, input.value.trim()]);
+      input.value = '';
     }
   };
 
@@ -139,9 +133,10 @@ export const ProblemForm: React.FC = () => {
   };
 
   const addHint = () => {
-    if (hintInput.trim()) {
-      setValue('hints', [...hints, hintInput.trim()]);
-      setHintInput('');
+    const input = document.getElementById('hintInput') as HTMLInputElement;
+    if (input && input.value.trim()) {
+      setValue('hints', [...hints, input.value.trim()]);
+      input.value = '';
     }
   };
 
@@ -150,9 +145,10 @@ export const ProblemForm: React.FC = () => {
   };
 
   const addConstraint = () => {
-    if (constraintInput.trim()) {
-      setValue('constraints', [...constraints, constraintInput.trim()]);
-      setConstraintInput('');
+    const input = document.getElementById('constraintInput') as HTMLInputElement;
+    if (input && input.value.trim()) {
+      setValue('constraints', [...constraints, input.value.trim()]);
+      input.value = '';
     }
   };
 
@@ -170,7 +166,6 @@ export const ProblemForm: React.FC = () => {
 
   return (
     <div className="py-8 max-w-4xl mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => navigate('/admin/problems')}
@@ -196,7 +191,7 @@ export const ProblemForm: React.FC = () => {
               <input
                 {...register('title')}
                 className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
-                placeholder="e.g., Two Sum"
+                placeholder="e.g., Sum of Two Numbers"
               />
               {errors.title && (
                 <p className="text-[#F87171] text-xs mt-1">{errors.title.message}</p>
@@ -271,7 +266,7 @@ export const ProblemForm: React.FC = () => {
                   <input
                     {...register(`examples.${index}.input`)}
                     className="w-full px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] font-mono text-sm"
-                    placeholder="e.g., nums = [2,7,11,15], target = 9"
+                    placeholder="e.g., a = 5, b = 10"
                   />
                 </div>
                 <div>
@@ -281,7 +276,7 @@ export const ProblemForm: React.FC = () => {
                   <input
                     {...register(`examples.${index}.output`)}
                     className="w-full px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] font-mono text-sm"
-                    placeholder="e.g., [0,1]"
+                    placeholder="e.g., 15"
                   />
                 </div>
               </div>
@@ -297,12 +292,6 @@ export const ProblemForm: React.FC = () => {
               </div>
             </div>
           ))}
-
-          {exampleFields.length === 0 && (
-            <p className="text-[#5C6360] text-sm text-center py-4">
-              No examples added yet. Add an example to help students understand the problem.
-            </p>
-          )}
         </div>
 
         {/* Constraints */}
@@ -310,8 +299,7 @@ export const ProblemForm: React.FC = () => {
           <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Constraints</h2>
           <div className="flex gap-2 mb-3">
             <input
-              value={constraintInput}
-              onChange={(e) => setConstraintInput(e.target.value)}
+              id="constraintInput"
               onKeyDown={(e) => e.key === 'Enter' && addConstraint()}
               className="flex-1 px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
               placeholder="Add a constraint..."
@@ -336,7 +324,7 @@ export const ProblemForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Test Cases */}
+        {/* Test Cases - UPDATED WITH NEW FORMAT */}
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-[#EDEFEE]">Test Cases</h2>
@@ -365,13 +353,16 @@ export const ProblemForm: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
-                    Input *
+                    Input * <span className="text-xs text-[#5C6360]">(e.g., 5, 10)</span>
                   </label>
                   <input
                     {...register(`testCases.${index}.input`)}
                     className="w-full px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] font-mono text-sm"
-                    placeholder="e.g., [2,7,11,15], 9"
+                    placeholder="e.g., 5, 10"
                   />
+                  {errors.testCases?.[index]?.input && (
+                    <p className="text-[#F87171] text-xs mt-1">{errors.testCases[index]?.input?.message}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
@@ -380,8 +371,11 @@ export const ProblemForm: React.FC = () => {
                   <input
                     {...register(`testCases.${index}.expectedOutput`)}
                     className="w-full px-4 py-2.5 bg-[#161A19] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] font-mono text-sm"
-                    placeholder="e.g., [0,1]"
+                    placeholder="e.g., 15"
                   />
+                  {errors.testCases?.[index]?.expectedOutput && (
+                    <p className="text-[#F87171] text-xs mt-1">{errors.testCases[index]?.expectedOutput?.message}</p>
+                  )}
                 </div>
               </div>
               <div className="mt-3 flex items-center">
@@ -396,87 +390,39 @@ export const ProblemForm: React.FC = () => {
               </div>
             </div>
           ))}
-
-          {testCaseFields.length === 0 && (
-            <p className="text-[#5C6360] text-sm text-center py-4">
-              No test cases added yet. Add test cases to validate student solutions.
-            </p>
-          )}
         </div>
 
-        {/* Starter & Solution Code */}
+        {/* Starter Code */}
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Starter Code */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[#EDEFEE]">Starter Code</h2>
-                <button
-                  type="button"
-                  onClick={() => setShowStarterPreview(!showStarterPreview)}
-                  className="text-xs text-[#5C6360] hover:text-[#10B981] transition-colors flex items-center gap-1"
-                >
-                  {showStarterPreview ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  {showStarterPreview ? 'Hide' : 'Show'} Preview
-                </button>
-              </div>
-              <textarea
-                {...register('starterCode')}
-                rows={8}
-                className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] font-mono text-sm"
-                placeholder="function solution() { // Write your solution here }"
-              />
-              {showStarterPreview && starterCode && (
-                <div className="mt-3">
-                  <p className="text-xs text-[#5C6360] mb-2">Preview:</p>
-                  <div className="bg-[#1E1E1E] rounded-lg p-3 font-mono text-sm text-[#D4D4D4] max-h-[150px] overflow-y-auto border border-[#2A302E]">
-                    <pre className="whitespace-pre-wrap">{starterCode || '// No starter code yet'}</pre>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Solution Code */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[#EDEFEE]">Solution Code</h2>
-                <button
-                  type="button"
-                  onClick={() => setShowSolutionPreview(!showSolutionPreview)}
-                  className="text-xs text-[#5C6360] hover:text-[#10B981] transition-colors flex items-center gap-1"
-                >
-                  {showSolutionPreview ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  {showSolutionPreview ? 'Hide' : 'Show'} Preview
-                </button>
-              </div>
-              <textarea
-                {...register('solutionCode')}
-                rows={8}
-                className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] font-mono text-sm"
-                placeholder="function solution() { return result; }"
-              />
-              {showSolutionPreview && solutionCode && (
-                <div className="mt-3">
-                  <p className="text-xs text-[#5C6360] mb-2">Preview:</p>
-                  <div className="bg-[#1E1E1E] rounded-lg p-3 font-mono text-sm text-[#D4D4D4] max-h-[150px] overflow-y-auto border border-[#2A302E]">
-                    <pre className="whitespace-pre-wrap">{solutionCode || '// No solution code yet'}</pre>
-                  </div>
-                </div>
-              )}
-            </div>
+          <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Starter Code (JavaScript)</h2>
+          <div>
+            <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
+              Starter Code
+            </label>
+            <textarea
+              {...register('starterCode')}
+              className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] font-mono text-sm min-h-[120px]"
+              placeholder={`/**
+ * @param {number} a
+ * @param {number} b
+ * @return {number}
+ */
+var sumOfTwoNumbers = function(a, b) {
+    // Write your solution here
+    return 0;
+};`}
+            />
           </div>
         </div>
 
         {/* Hints & Tags */}
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Hints */}
             <div>
               <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Hints</h2>
               <div className="flex gap-2 mb-3">
                 <input
-                  value={hintInput}
-                  onChange={(e) => setHintInput(e.target.value)}
+                  id="hintInput"
                   onKeyDown={(e) => e.key === 'Enter' && addHint()}
                   className="flex-1 px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
                   placeholder="Add a hint..."
@@ -501,13 +447,11 @@ export const ProblemForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Tags */}
             <div>
               <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4">Tags</h2>
               <div className="flex gap-2 mb-3">
                 <input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
+                  id="tagInput"
                   onKeyDown={(e) => e.key === 'Enter' && addTag()}
                   className="flex-1 px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360]"
                   placeholder="Add a tag..."
@@ -530,11 +474,6 @@ export const ProblemForm: React.FC = () => {
                   </span>
                 ))}
               </div>
-              {tags.length === 0 && (
-                <p className="text-[#5C6360] text-sm text-center py-2">
-                  No tags added. Add tags to help students find this problem.
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -565,7 +504,6 @@ export const ProblemForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Submit */}
         <div className="flex gap-4">
           <Button
             type="button"

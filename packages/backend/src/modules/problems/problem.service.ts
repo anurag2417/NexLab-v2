@@ -11,21 +11,7 @@ import { randomUUID } from 'crypto';
 const execAsync = promisify(exec);
 
 export class ProblemService {
-  // ---------- Problem CRUD ----------
-  
   static async createProblem(data: Partial<IProblem>): Promise<IProblem> {
-    // Ensure starterCode is set
-    if (!data.starterCode || data.starterCode.trim() === '') {
-      const functionName = data.title
-        ? data.title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '_')
-            .replace(/^_+|_+$/g, '')
-        : 'solution';
-      
-      data.starterCode = `function ${functionName}() {\n  // Write your solution here\n  // Return the result\n  return 0;\n}`;
-    }
-    
     const problem = await Problem.create(data);
     return problem;
   }
@@ -36,10 +22,7 @@ export class ProblemService {
   }
 
   static async getProblemBySlug(slug: string): Promise<IProblem | null> {
-    const problem = await Problem.findOne({ slug, isPublished: true })
-      .populate('createdBy', 'name')
-      .populate('solvedBy', 'name email')
-      .lean();
+    const problem = await Problem.findOne({ slug, isPublished: true }).populate('createdBy', 'name').lean();
     return problem as IProblem | null;
   }
 
@@ -68,7 +51,7 @@ export class ProblemService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select('title slug difficulty tags createdAt isPublished solvedBy')
+        .select('title slug difficulty tags createdAt isPublished starterCode')
         .lean(),
       Problem.countDocuments(query),
     ]);
@@ -86,12 +69,7 @@ export class ProblemService {
     return !!result;
   }
 
-  // ---------- Helper: Strip ANSI Color Codes ----------
-  static stripAnsiCodes(str: string): string {
-    return str.replace(/\x1b\[[0-9;]*m/g, '');
-  }
-
-  // ---------- Submit Solution ----------
+  // ---------- SUBMIT SOLUTION - FIXED ----------
   static async submitSolution(
     problemId: string,
     userId: string,
@@ -109,63 +87,85 @@ export class ProblemService {
     let errorMessage = '';
     let runtime = 0;
     let memory = 0;
+    
+    const testResults: any[] = [];
 
-    // Run each test case
+    if (testCases.length === 0) {
+      return {
+        passedTests: 0,
+        totalTests: 0,
+        status: 'runtime_error',
+        runtime: 0,
+        memory: 0,
+        errorMessage: 'No test cases defined.',
+        testResults: [],
+      };
+    }
+
+    console.log(`🔍 Running ${testCases.length} test cases...`);
+
     for (const testCase of testCases) {
+      const isHidden = testCase.isHidden || false;
+      const result: any = { 
+        input: testCase.input, 
+        expected: testCase.expectedOutput, 
+        passed: false, 
+        isHidden,
+        got: ''
+      };
+      
       try {
-        const result = await this.executeJavaScript(
-          code,
-          testCase.input,
-          problem.timeLimit || 2000
-        );
+        const execResult = await this.executeCodeDirectly(code, testCase.input);
         
-        runtime += result.runtime;
-        memory = Math.max(memory, result.memory);
+        runtime += execResult.runtime || 0;
+        memory = Math.max(memory, execResult.memory || 0);
 
-        const output = this.stripAnsiCodes(result.output).trim();
+        const output = execResult.output.trim();
         const expected = testCase.expectedOutput.trim();
 
+        result.got = output;
+        
+        console.log(`📊 Test: input="${testCase.input}", expected="${expected}", got="${output}"`);
+        console.log(`📊 Comparison: "${output}" === "${expected}" ? ${output === expected}`);
+        
         if (output !== expected) {
           status = 'wrong_answer';
           errorMessage = `Expected: ${expected}, Got: ${output}`;
+          result.passed = false;
+          testResults.push(result);
           break;
         }
 
+        result.passed = true;
+        testResults.push(result);
         passedTests++;
       } catch (error: any) {
         console.error('Test case error:', error);
-        if (error.message.includes('timeout')) {
-          status = 'time_limit';
-          errorMessage = 'Time limit exceeded';
-        } else {
-          status = 'runtime_error';
-          errorMessage = error.message || 'Runtime error';
-        }
+        result.got = error.message || 'Error';
+        result.passed = false;
+        testResults.push(result);
+        status = 'runtime_error';
+        errorMessage = error.message || 'Runtime error';
         break;
       }
     }
 
-    // If accepted, mark problem as solved by this user
-    if (status === 'accepted') {
-      // Check if user already solved this problem
-      const alreadySolved = problem.solvedBy?.some(
-        (id) => id.toString() === userId
-      );
-      
-      if (!alreadySolved) {
-        if (!problem.solvedBy) {
-          problem.solvedBy = [];
-        }
-        problem.solvedBy.push(new Types.ObjectId(userId));
-        await problem.save();
-        console.log(`✅ Problem ${problem.title} marked as solved by user ${userId}`);
-      }
+    while (testResults.length < testCases.length) {
+      const idx = testResults.length;
+      const tc = testCases[idx];
+      testResults.push({
+        input: tc.input,
+        expected: tc.expectedOutput,
+        got: 'Not executed',
+        passed: false,
+        isHidden: tc.isHidden || false
+      });
     }
 
-    // Save submission
     const submission = await ProblemSubmission.create({
       problemId: new Types.ObjectId(problemId),
       userId: new Types.ObjectId(userId),
+      language: 'javascript',
       code,
       status,
       passedTests,
@@ -176,7 +176,6 @@ export class ProblemService {
       submittedAt: new Date(),
     });
 
-    // Award XP if accepted
     if (status === 'accepted') {
       const xpGain = this.getXpForDifficulty(problem.difficulty);
       const user = await User.findById(userId);
@@ -199,111 +198,118 @@ export class ProblemService {
       runtime: Math.round(runtime / Math.max(testCases.length, 1)),
       memory,
       errorMessage,
-      isSolved: status === 'accepted',
+      testResults,
     };
   }
 
-  // ---------- Execute JavaScript Code ----------
-  static async executeJavaScript(
+  // ---------- DIRECT CODE EXECUTION - FIXED ----------
+  static async executeCodeDirectly(
     code: string,
-    input: string,
-    timeLimit: number
+    input: string
   ): Promise<{ output: string; runtime: number; memory: number }> {
     const tempDir = path.join(process.cwd(), 'temp');
-    await fs.mkdir(tempDir, { recursive: true });
+    
+    try {
+      await fs.mkdir(tempDir, { recursive: true });
+    } catch (e) {}
 
     const fileId = randomUUID();
     const filePath = path.join(tempDir, `code_${fileId}.js`);
 
-    const finalCode = this.wrapWithTestRunner(code, input);
-    await fs.writeFile(filePath, finalCode, 'utf-8');
+    // ✅ Detect function name across multiple declaration styles
+    const patterns = [
+      /var\s+(\w+)\s*=\s*function/,
+      /let\s+(\w+)\s*=\s*function/,
+      /const\s+(\w+)\s*=\s*function/,
+      /function\s+(\w+)\s*\(/,
+      /var\s+(\w+)\s*=\s*\(/,
+      /let\s+(\w+)\s*=\s*\(/,
+      /const\s+(\w+)\s*=\s*\(/,
+    ];
+    
+    let functionName: string | null = null;
+    for (const p of patterns) {
+      const m = code.match(p);
+      if (m) { 
+        functionName = m[1]; 
+        break; 
+      }
+    }
+    
+    if (!functionName) {
+      throw new Error('Could not detect a function definition in your code.');
+    }
 
-    console.log(`📄 Created temp file: ${filePath}`);
+    // ✅ Validate input is safe JS
+    try {
+      new Function(`return [${input}]`)();
+    } catch {
+      throw new Error(`Test case input is not valid JS arguments: "${input}". Use format like: 5, 10`);
+    }
+
+    // ✅ Create the wrapper
+    const wrapperCode = `
+${code}
+
+// ✅ Execute with test values
+const result = ${functionName}(${input});
+// ✅ Ensure clean output - no extra spaces
+console.log(String(result).trim());
+`;
+    
+    await fs.writeFile(filePath, wrapperCode, 'utf-8');
+
+    console.log(`📄 Running test: ${functionName}(${input})`);
 
     const startTime = Date.now();
-    let output = '';
-    let error = '';
+    let stdout = '';
+    let stderr = '';
 
     try {
-      const timeoutMs = Math.max(timeLimit, 3000);
-      const { stdout, stderr } = await execAsync(
-        `node "${filePath}"`,
-        {
-          timeout: timeoutMs,
-          env: { ...process.env, PATH: process.env.PATH },
-          maxBuffer: 1024 * 1024 * 10,
-        }
-      );
-      output = stdout;
-      error = stderr;
-    } catch (execError: any) {
-      console.error('Execution error:', execError);
-      if (execError.killed) {
-        throw new Error('timeout');
+      const result = await execAsync(`node "${filePath}"`, {
+        timeout: 5000,
+        env: { ...process.env, PATH: process.env.PATH },
+        maxBuffer: 1024 * 1024 * 10,
+      });
+      
+      stdout = result.stdout;
+      stderr = result.stderr;
+      
+      stdout = stdout.trim();
+      stderr = stderr.trim();
+      
+      console.log(`📤 Output: "${stdout}"`);
+      
+    } catch (error: any) {
+      console.error('❌ Execution error:', error);
+      if (error.stdout) stdout = error.stdout.trim();
+      if (error.stderr) stderr = error.stderr.trim();
+      
+      if (stdout || stderr) {
+        return { 
+          output: stdout || stderr, 
+          runtime: Date.now() - startTime, 
+          memory: 0 
+        };
       }
-      if (execError.stderr) {
-        error = execError.stderr;
-        return { output: execError.stdout || '', runtime: Date.now() - startTime, memory: 0 };
-      }
-      throw new Error(execError.message || 'Execution failed');
+      throw new Error(error.message || 'Execution failed');
     } finally {
-      await fs.rm(filePath, { force: true });
+      try {
+        await fs.rm(filePath, { force: true });
+      } catch (e) {}
     }
 
     const runtime = Date.now() - startTime;
-    const memory = 0;
 
-    if (error) {
-      throw new Error(error);
-    }
-
-    return { output: this.stripAnsiCodes(output), runtime, memory };
-  }
-
-  // ---------- Wrap Code with Test Runner ----------
-  static wrapWithTestRunner(code: string, input: string): string {
-    const lines = input.split('\n').filter(s => s.trim());
-    const args = lines.map(s => s.trim());
-    
-    let parsedInput = args;
-    if (args.length === 1 && args[0].startsWith('[')) {
-      try {
-        parsedInput = JSON.parse(args[0]);
-      } catch (e) { /* ignore */ }
-    }
-
-    const inputString = JSON.stringify(parsedInput);
-    
-    // Try to detect the function name from the code
-    let functionName = 'solution';
-    const funcMatch = code.match(/(?:function|const|let|var)\s+(\w+)\s*[=\(]/);
-    if (funcMatch) {
-      functionName = funcMatch[1];
-    }
-
-    return `
-${code}
-
-// Test runner
-function runSolution() {
-  try {
-    const input = ${inputString};
-    
-    let result;
-    if (Array.isArray(input)) {
-      result = ${functionName}(...input);
-    } else {
-      result = ${functionName}(input);
+    if (stdout) {
+      return { output: stdout, runtime, memory: 0 };
     }
     
-    console.log(result);
-  } catch (error) {
-    console.error(error.message);
-  }
-}
+    if (stderr) {
+      return { output: stderr, runtime, memory: 0 };
+    }
 
-runSolution();
-`;
+    return { output: '', runtime, memory: 0 };
   }
 
   static getXpForDifficulty(difficulty: string): number {

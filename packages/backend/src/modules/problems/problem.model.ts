@@ -26,7 +26,6 @@ export interface IProblem extends Document {
   timeLimit: number;
   memoryLimit: number;
   isPublished: boolean;
-  solvedBy: Types.ObjectId[]; // ✅ New field: users who solved this problem
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -36,8 +35,9 @@ export interface IProblemSubmission extends Document {
   _id: Types.ObjectId;
   problemId: Types.ObjectId;
   userId: Types.ObjectId;
+  language: string;
   code: string;
-  status: 'pending' | 'accepted' | 'wrong_answer' | 'time_limit' | 'runtime_error' | 'compile_error';
+  status: 'pending' | 'accepted' | 'wrong_answer' | 'time_limit' | 'memory_limit' | 'runtime_error' | 'compile_error';
   passedTests: number;
   totalTests: number;
   runtime: number;
@@ -78,16 +78,25 @@ const ProblemSchema = new Schema<IProblem>(
     timeLimit: { type: Number, default: 2000 },
     memoryLimit: { type: Number, default: 256 },
     isPublished: { type: Boolean, default: false },
-    solvedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }], // ✅ New field
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
 );
 
-// Auto-generate slug from title
 ProblemSchema.pre('save', function(next) {
   if (this.isModified('title') || !this.slug) {
     this.slug = this.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  next();
+});
+
+ProblemSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate() as any;
+  if (update.title && !update.slug) {
+    update.slug = update.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
@@ -99,10 +108,11 @@ const ProblemSubmissionSchema = new Schema<IProblemSubmission>(
   {
     problemId: { type: Schema.Types.ObjectId, ref: 'Problem', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    language: { type: String, required: true },
     code: { type: String, required: true },
     status: { 
       type: String, 
-      enum: ['pending', 'accepted', 'wrong_answer', 'time_limit', 'runtime_error', 'compile_error'],
+      enum: ['pending', 'accepted', 'wrong_answer', 'time_limit', 'memory_limit', 'runtime_error', 'compile_error'],
       default: 'pending'
     },
     passedTests: { type: Number, default: 0 },
