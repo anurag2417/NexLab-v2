@@ -1,3 +1,5 @@
+// packages/frontend/src/pages/student/CoursePlayer.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -8,6 +10,7 @@ import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { CourseReviews } from '../../components/CourseReviews';
 import { QuizModal } from '../../components/QuizModal';
+import { formatISTDate } from '../../utils/dateUtils';
 
 interface Lesson {
   _id: string;
@@ -28,6 +31,7 @@ interface Course {
   enrolledStudents: string[];
   rating?: number;
   totalReviews?: number;
+  createdAt: string;
 }
 
 interface Quiz {
@@ -114,7 +118,6 @@ export const CoursePlayer: React.FC = () => {
         .map((a: any) => a.quizId._id || a.quizId);
       setCompletedQuizzes(completed);
       
-      // Check if current lesson's quiz is completed
       if (quizzes.length > 0) {
         const isCompleted = completed.includes(quizzes[0]._id);
         setQuizCompleted(isCompleted);
@@ -142,7 +145,6 @@ export const CoursePlayer: React.FC = () => {
   const handleQuizComplete = (score: number, passed: boolean) => {
     setQuizCompleted(true);
     setCompletedQuizzes([...completedQuizzes, selectedQuizId || '']);
-    // Refresh data
     fetchCourse();
     fetchProgress();
   };
@@ -172,22 +174,20 @@ export const CoursePlayer: React.FC = () => {
 
   const totalLessons = course.lessons.length;
   const completedCount = completedLessons.length;
-
-  // Check if all lessons are completed
   const allLessonsCompleted = completedCount === totalLessons && totalLessons > 0;
 
   return (
-    <div className="max-w-6xl mx-auto py-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
         <button
           onClick={() => navigate('/courses')}
-          className="p-2 hover:bg-[#1E2322] rounded-lg transition-colors"
+          className="p-2 hover:bg-[#1E2322] rounded-lg transition-colors self-start"
         >
           <ArrowLeft className="w-5 h-5 text-[#9CA3A0]" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-[#EDEFEE]">{course.title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#EDEFEE]">{course.title}</h1>
           <p className="text-[#9CA3A0] text-sm">Instructor: {course.instructor?.name || 'Unknown'}</p>
           {course.rating && course.rating > 0 && (
             <div className="flex items-center gap-1 mt-1">
@@ -196,12 +196,15 @@ export const CoursePlayer: React.FC = () => {
               <span className="text-xs text-[#5C6360]">({course.totalReviews || 0} reviews)</span>
             </div>
           )}
+          <p className="text-xs text-[#5C6360] mt-1">
+            Created: {formatISTDate(course.createdAt, 'date')}
+          </p>
         </div>
       </div>
 
       {/* Progress Bar */}
       <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 mb-6 shadow-sm">
-        <div className="flex items-center justify-between text-sm text-[#9CA3A0] mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm text-[#9CA3A0] mb-2">
           <span>Course Progress</span>
           <span className="text-[#10B981] font-semibold">{progress}% Complete</span>
         </div>
@@ -211,7 +214,7 @@ export const CoursePlayer: React.FC = () => {
             style={{ width: `${progress}%` }}
           />
         </div>
-        <div className="flex items-center gap-4 mt-2 text-xs text-[#5C6360]">
+        <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-[#5C6360]">
           <span>{completedCount} of {totalLessons} lessons completed</span>
           {xpEarned > 0 && (
             <span className="text-[#10B981] font-medium">+{xpEarned} XP earned!</span>
@@ -243,14 +246,14 @@ export const CoursePlayer: React.FC = () => {
               )}
             </div>
             
-            <div className="p-6">
-              <div className="flex items-start justify-between">
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-semibold text-[#EDEFEE]">
+                  <h2 className="text-lg sm:text-xl font-semibold text-[#EDEFEE]">
                     {currentLesson?.title || 'No lesson selected'}
                   </h2>
                   {currentLesson?.description && (
-                    <p className="text-[#9CA3A0] mt-2">{currentLesson.description}</p>
+                    <p className="text-[#9CA3A0] mt-2 text-sm">{currentLesson.description}</p>
                   )}
                 </div>
                 {currentLesson && (
@@ -258,7 +261,7 @@ export const CoursePlayer: React.FC = () => {
                     variant={isLessonCompleted(currentLesson._id) ? 'outline' : 'primary'}
                     onClick={() => handleCompleteLesson(currentLesson._id)}
                     disabled={isLessonCompleted(currentLesson._id)}
-                    className="flex-shrink-0 ml-4"
+                    className="flex-shrink-0"
                   >
                     {isLessonCompleted(currentLesson._id) ? (
                       <>
@@ -329,7 +332,7 @@ export const CoursePlayer: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between mt-6">
+      <div className="flex flex-col sm:flex-row justify-between gap-3 mt-6">
         <Button
           variant="outline"
           onClick={() => setCurrentLessonIndex(Math.max(0, currentLessonIndex - 1))}
@@ -353,9 +356,9 @@ export const CoursePlayer: React.FC = () => {
       {/* Quiz Section */}
       {quizzes.length > 0 && (
         <div className="mt-6 p-4 bg-[#161A19] border border-[#2A302E] rounded-xl">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#FBBF24]/20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-[#FBBF24]/20 flex items-center justify-center flex-shrink-0">
                 <Zap className="w-5 h-5 text-[#FBBF24]" />
               </div>
               <div>
@@ -376,6 +379,7 @@ export const CoursePlayer: React.FC = () => {
                 setIsQuizModalOpen(true);
               }}
               disabled={quizCompleted}
+              className="flex-shrink-0"
             >
               {quizCompleted ? 'Completed ✅' : 'Start Quiz'}
             </Button>
@@ -410,3 +414,5 @@ export const CoursePlayer: React.FC = () => {
     </div>
   );
 };
+
+export default CoursePlayer;

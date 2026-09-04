@@ -1,3 +1,5 @@
+// packages/frontend/src/pages/student/Leaderboard.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../lib/api';
@@ -119,7 +121,7 @@ export const Leaderboard: React.FC = () => {
         <div className="bg-[#161A19] border border-[#10B981]/20 rounded-xl p-4 sm:p-5 mb-6 sm:mb-8 shadow-sm shadow-[#10B981]/5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#10B981]/20 border-2 border-[#10B981] flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[#10B981]/20 border-2 border-[#10B981] flex items-center justify-center flex-shrink-0">
                 <span className="text-xl font-bold text-[#10B981]">
                   #{userRank.rank}
                 </span>
@@ -193,7 +195,7 @@ export const Leaderboard: React.FC = () => {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0 ${
                             isCurrentUser 
                               ? 'bg-[#10B981] text-white' 
                               : 'bg-[#2A302E] text-[#EDEFEE]'
@@ -296,3 +298,5 @@ export const Leaderboard: React.FC = () => {
     </div>
   );
 };
+
+export default Leaderboard;

@@ -1,12 +1,15 @@
+// packages/frontend/src/pages/admin/AdminAnalytics.tsx
+
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Users, BookOpen, DollarSign, 
-  BarChart3, RefreshCw,
-  GraduationCap
+  BarChart3, RefreshCw, GraduationCap, Eye,
+  ArrowRight
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { StatCard } from '../../components/ui/StatCard';
+import { formatISTDate } from '../../utils/dateUtils';
 
 interface OverviewData {
   totalStudents: number;
@@ -81,12 +84,12 @@ export const AdminAnalytics: React.FC = () => {
   }
 
   return (
-    <div className="py-8 max-w-7xl mx-auto">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#2A302E]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-[#2A302E]">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#EDEFEE] flex items-center gap-2">
-            <BarChart3 className="w-8 h-8 text-[#10B981]" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#EDEFEE] flex items-center gap-2">
+            <BarChart3 className="w-7 h-7 sm:w-8 sm:h-8 text-[#10B981]" />
             Analytics
           </h1>
           <p className="text-[#9CA3A0] mt-1">Monitor platform performance and insights</p>
@@ -155,37 +158,37 @@ export const AdminAnalytics: React.FC = () => {
         {/* Overview Stats */}
         {activeTab === 'overview' && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <StatCard 
                 title="Total Students" 
                 value={overview?.totalStudents || 0} 
-                icon={<Users className="w-6 h-6 text-[#10B981]" />} 
+                icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-[#10B981]" />} 
                 color="emerald"
               />
               <StatCard 
                 title="Total Courses" 
                 value={overview?.totalCourses || 0} 
-                icon={<BookOpen className="w-6 h-6 text-[#60A5FA]" />} 
+                icon={<BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-[#60A5FA]" />} 
                 color="info"
               />
               <StatCard 
                 title="Total Enrollments" 
                 value={overview?.totalEnrollments || 0} 
-                icon={<GraduationCap className="w-6 h-6 text-[#FBBF24]" />} 
+                icon={<GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-[#FBBF24]" />} 
                 color="warning"
               />
               <StatCard 
                 title="Revenue" 
                 value={`$${overview?.totalRevenue || 0}`} 
-                icon={<DollarSign className="w-6 h-6 text-[#10B981]" />} 
+                icon={<DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-[#10B981]" />} 
                 color="emerald"
               />
             </div>
 
             {/* Growth Chart */}
-            <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-[#EDEFEE] mb-4">Growth (Last 7 Days)</h3>
-              <div className="h-64 flex items-end justify-between gap-2">
+            <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
+              <h3 className="text-base sm:text-lg font-semibold text-[#EDEFEE] mb-4">Growth (Last 7 Days)</h3>
+              <div className="h-48 sm:h-64 flex items-end justify-between gap-2">
                 {growthData.map((day, index) => {
                   const maxValue = Math.max(...growthData.map(d => d.newUsers), 1);
                   const height = (day.newUsers / maxValue) * 100;
@@ -193,30 +196,30 @@ export const AdminAnalytics: React.FC = () => {
                     <div key={index} className="flex-1 flex flex-col items-center">
                       <div className="w-full flex flex-col items-center">
                         <div 
-                          className="w-full max-w-[40px] bg-gradient-to-t from-[#10B981] to-[#34D399] rounded-t transition-all duration-500"
+                          className="w-full max-w-[30px] sm:max-w-[40px] bg-gradient-to-t from-[#10B981] to-[#34D399] rounded-t transition-all duration-500"
                           style={{ height: `${Math.max(height * 0.8, 4)}px` }}
                         />
-                        <div className="text-xs text-[#5C6360] mt-2">{day.label}</div>
-                        <div className="text-xs font-medium text-[#EDEFEE]">{day.newUsers}</div>
+                        <div className="text-[10px] sm:text-xs text-[#5C6360] mt-2">{day.label}</div>
+                        <div className="text-[10px] sm:text-xs font-medium text-[#EDEFEE]">{day.newUsers}</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-xs text-[#5C6360] text-center mt-4">New users per day</p>
+              <p className="text-xs text-[#5C6360] text-center mt-4">New users per day (IST)</p>
             </div>
 
             {/* Popular Courses Preview */}
-            <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-[#EDEFEE] mb-4">Popular Courses</h3>
+            <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
+              <h3 className="text-base sm:text-lg font-semibold text-[#EDEFEE] mb-4">Popular Courses</h3>
               <div className="space-y-3">
                 {popularCourses.slice(0, 5).map((course, index) => (
                   <div key={index} className="flex items-center justify-between border-b border-[#2A302E] pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <span className="text-sm font-bold text-[#5C6360]">#{index + 1}</span>
-                      <div>
-                        <p className="text-sm font-medium text-[#EDEFEE]">{course.title}</p>
-                        <div className="flex items-center gap-2 text-xs">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[#EDEFEE] truncate">{course.title}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
                           <span className={`px-1.5 py-0.5 rounded ${getLevelColor(course.level)}`}>
                             {course.level}
                           </span>
@@ -224,9 +227,9 @@ export const AdminAnalytics: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="text-sm font-bold text-[#10B981]">{course.enrolledStudents}</p>
-                      <p className="text-xs text-[#5C6360">enrolled</p>
+                      <p className="text-xs text-[#5C6360]">enrolled</p>
                     </div>
                   </div>
                 ))}
@@ -237,9 +240,9 @@ export const AdminAnalytics: React.FC = () => {
 
         {/* Courses Tab */}
         {activeTab === 'courses' && (
-          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-[#EDEFEE] mb-4">All Courses Analytics</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
+            <h3 className="text-base sm:text-lg font-semibold text-[#EDEFEE] mb-4">All Courses Analytics</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
               <div className="bg-[#0D0F0F] rounded-lg p-4 text-center">
                 <p className="text-2xl font-bold text-[#EDEFEE]">{overview?.totalCourses || 0}</p>
                 <p className="text-xs text-[#5C6360]">Total Courses</p>
@@ -258,9 +261,9 @@ export const AdminAnalytics: React.FC = () => {
             <div className="space-y-3">
               {popularCourses.map((course, index) => (
                 <div key={index} className="flex items-center justify-between border-b border-[#2A302E] pb-3 last:border-0 last:pb-0">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-[#EDEFEE]">{course.title}</p>
-                    <div className="flex items-center gap-3 text-xs text-[#5C6360]">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#EDEFEE] truncate">{course.title}</p>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-[#5C6360]">
                       <span className={`px-1.5 py-0.5 rounded ${getLevelColor(course.level)}`}>
                         {course.level}
                       </span>
@@ -268,7 +271,7 @@ export const AdminAnalytics: React.FC = () => {
                       <span>{course.enrolledStudents} students</span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <p className="text-sm font-bold text-[#10B981]">{course.enrolledStudents}</p>
                     <p className="text-xs text-[#5C6360]">enrollments</p>
                   </div>
@@ -280,9 +283,9 @@ export const AdminAnalytics: React.FC = () => {
 
         {/* Students Tab */}
         {activeTab === 'students' && (
-          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-[#EDEFEE] mb-4">Student Analytics</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
+            <h3 className="text-base sm:text-lg font-semibold text-[#EDEFEE] mb-4">Student Analytics</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
               <div className="bg-[#0D0F0F] rounded-lg p-4 text-center">
                 <p className="text-2xl font-bold text-[#EDEFEE]">{overview?.totalStudents || 0}</p>
                 <p className="text-xs text-[#5C6360]">Total Students</p>
@@ -296,7 +299,6 @@ export const AdminAnalytics: React.FC = () => {
                 <p className="text-xs text-[#5C6360]">Total Enrollments</p>
               </div>
             </div>
-
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-[#5C6360] mx-auto mb-3 opacity-40" />
               <p className="text-[#9CA3A0]">Detailed student analytics coming soon</p>
@@ -307,9 +309,9 @@ export const AdminAnalytics: React.FC = () => {
 
         {/* Revenue Tab */}
         {activeTab === 'revenue' && (
-          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-[#EDEFEE] mb-4">Revenue Analytics</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
+            <h3 className="text-base sm:text-lg font-semibold text-[#EDEFEE] mb-4">Revenue Analytics</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
               <div className="bg-[#0D0F0F] rounded-lg p-4 text-center">
                 <p className="text-2xl font-bold text-[#10B981]">${overview?.totalRevenue || 0}</p>
                 <p className="text-xs text-[#5C6360]">Total Revenue</p>
@@ -324,21 +326,20 @@ export const AdminAnalytics: React.FC = () => {
             <div className="space-y-3">
               {popularCourses.slice(0, 5).map((course, index) => (
                 <div key={index} className="flex items-center justify-between border-b border-[#2A302E] pb-3 last:border-0 last:pb-0">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-[#EDEFEE]">{course.title}</p>
-                    <div className="flex items-center gap-3 text-xs text-[#5C6360]">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#EDEFEE] truncate">{course.title}</p>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-[#5C6360]">
                       <span>${course.price}</span>
                       <span>{course.enrolledStudents} students</span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <p className="text-sm font-bold text-[#10B981]">${(course.price * course.enrolledStudents).toFixed(2)}</p>
                     <p className="text-xs text-[#5C6360]">revenue</p>
                   </div>
                 </div>
               ))}
             </div>
-
             <div className="mt-6 text-center py-4 bg-[#0D0F0F] rounded-lg">
               <p className="text-sm text-[#5C6360]">💡 Tip: Create more premium courses to increase revenue</p>
             </div>
@@ -348,3 +349,5 @@ export const AdminAnalytics: React.FC = () => {
     </div>
   );
 };
+
+export default AdminAnalytics;

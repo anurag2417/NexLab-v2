@@ -1,23 +1,31 @@
+// packages/frontend/src/components/ActivityHeatmap.tsx
+
 import React from 'react';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import { Calendar } from 'lucide-react';
 import 'react-calendar-heatmap/dist/styles.css';
+import { formatISTDateOnly } from '../utils/dateUtils';
 
 interface ActivityHeatmapProps {
   data: { date: string; count: number }[];
 }
 
 export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ data }) => {
-  const endDate = new Date();
-  const startDate = new Date();
+  // ✅ Use IST date for end date
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istNow = new Date(now.getTime() + istOffset);
+  
+  const endDate = new Date(istNow);
+  const startDate = new Date(istNow);
   startDate.setFullYear(startDate.getFullYear() - 1);
 
   return (
-    <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-6 shadow-sm">
+    <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
-        <Calendar className="w-5 h-5 text-[#10B981]" />
+        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-[#10B981]" />
         <h3 className="text-sm font-medium text-[#EDEFEE]">Coding Activity</h3>
-        <span className="text-xs text-[#5C6360] ml-auto">Last 365 days</span>
+        <span className="text-xs text-[#5C6360] ml-auto">Last 365 days (IST)</span>
       </div>
       <div className="overflow-x-auto">
         <CalendarHeatmap
@@ -52,3 +60,5 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ data }) => {
     </div>
   );
 };
+
+export default ActivityHeatmap;

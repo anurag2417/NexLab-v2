@@ -1,3 +1,5 @@
+// packages/frontend/src/pages/LandingPage.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -9,7 +11,8 @@ import {
   ChevronRight, Menu, X, GraduationCap,
   Clock, Briefcase, Rocket, Heart, 
   Twitter, Linkedin, Github, Youtube,
-  Mail, MapPin, Phone, ChevronUp
+  Mail, MapPin, Phone, ChevronUp,
+  Instagram, Facebook
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
@@ -37,7 +40,6 @@ export const LandingPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Animate stats on scroll
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -102,28 +104,31 @@ export const LandingPage: React.FC = () => {
 
   const testimonials = [
     {
-      name: 'Sarah Johnson',
+      name: 'Priya Sharma',
       role: 'Software Developer',
-      company: 'Tech Corp',
-      image: 'https://ui-avatars.com/api/?name=Sarah+Johnson&background=10B981&color=fff&size=60',
+      company: 'Tech Mahindra',
+      image: 'https://ui-avatars.com/api/?name=Priya+Sharma&background=10B981&color=fff&size=60',
       quote: 'NexLab transformed my coding journey. The interactive courses and sandbox made learning so much easier. I went from zero to building full-stack applications in just 3 months!',
       rating: 5,
+      location: 'Mumbai, India'
     },
     {
-      name: 'Michael Chen',
+      name: 'Rahul Verma',
       role: 'Data Scientist',
-      company: 'AI Solutions',
-      image: 'https://ui-avatars.com/api/?name=Michael+Chen&background=60A5FA&color=fff&size=60',
+      company: 'Flipkart',
+      image: 'https://ui-avatars.com/api/?name=Rahul+Verma&background=60A5FA&color=fff&size=60',
       quote: 'The Python courses and the code sandbox are exceptional. I love how I can practice coding right in the browser without any setup. This platform is a game-changer for self-learning.',
       rating: 5,
+      location: 'Bangalore, India'
     },
     {
-      name: 'Emily Rodriguez',
+      name: 'Ananya Reddy',
       role: 'Full Stack Developer',
       company: 'Freelance',
-      image: 'https://ui-avatars.com/api/?name=Emily+Rodriguez&background=FBBF24&color=fff&size=60',
+      image: 'https://ui-avatars.com/api/?name=Ananya+Reddy&background=FBBF24&color=fff&size=60',
       quote: 'I\'ve tried many learning platforms, but NexLab stands out with its gamification and community. The XP system keeps me motivated, and the leaderboard pushes me to learn more every day.',
       rating: 5,
+      location: 'Hyderabad, India'
     },
   ];
 
@@ -152,7 +157,7 @@ export const LandingPage: React.FC = () => {
     {
       icon: <Users className="w-6 h-6" />,
       title: 'Community Learning',
-      description: 'Join thousands of students and collaborate on projects and discussions.',
+      description: 'Join thousands of students across India and collaborate on projects and discussions.',
       color: 'text-[#F87171]',
       bgColor: 'bg-[#F87171]/10',
     },
@@ -161,7 +166,7 @@ export const LandingPage: React.FC = () => {
   const faqs = [
     {
       question: 'Is NexLab free to use?',
-      answer: 'Yes! NexLab offers free courses with a powerful code sandbox. Premium courses will be available soon.',
+      answer: 'Yes! NexLab offers free courses with a powerful code sandbox. Premium courses start at just ₹499.',
     },
     {
       question: 'What programming languages are supported?',
@@ -183,6 +188,10 @@ export const LandingPage: React.FC = () => {
       question: 'How do I get started?',
       answer: 'Simply create a free account and start exploring our courses. You can begin learning immediately!',
     },
+    {
+      question: 'What payment methods are accepted?',
+      answer: 'We accept UPI, Net Banking, Credit/Debit Cards, and all major Indian payment methods.',
+    },
   ];
 
   const languages = [
@@ -196,7 +205,7 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0D0F0F]">
-      {/* ============== NAVIGATION ============== */}
+      {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D0F0F]/95 backdrop-blur-sm border-b border-[#2A302E]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -288,7 +297,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </nav>
 
-      {/* ============== HERO SECTION ============== */}
+      {/* Hero Section */}
       <section className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[#10B981]/5 to-transparent pointer-events-none" />
         <div className="absolute top-20 right-20 w-64 h-64 bg-[#10B981]/10 rounded-full blur-3xl pointer-events-none" />
@@ -297,12 +306,13 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto text-center relative">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#10B981]/10 border border-[#10B981]/20 mb-6">
             <Sparkles className="w-4 h-4 text-[#10B981]" />
-            <span className="text-xs font-medium text-[#10B981]">🚀 10,000+ Students Trust NexLab</span>
+            <span className="text-xs font-medium text-[#10B981]">🇮🇳 10,000+ Students Trust NexLab India</span>
           </div>
 
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-[#EDEFEE] mb-6 leading-tight">
             Learn, Code, and
             <span className="text-[#10B981]"> Grow</span>
+            <span className="block text-2xl md:text-3xl lg:text-4xl text-[#9CA3A0] mt-2">From 🇮🇳 India, For the World</span>
           </h1>
           
           <p className="text-xl text-[#9CA3A0] max-w-2xl mx-auto mb-8 leading-relaxed">
@@ -327,7 +337,7 @@ export const LandingPage: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-8 mt-8 text-sm text-[#5C6360]">
+          <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-sm text-[#5C6360]">
             <span className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-[#10B981]" />
               No credit card required
@@ -336,11 +346,15 @@ export const LandingPage: React.FC = () => {
               <CheckCircle className="w-4 h-4 text-[#10B981]" />
               Cancel anytime
             </span>
+            <span className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-[#10B981]" />
+              UPI & Indian payments accepted
+            </span>
           </div>
         </div>
       </section>
 
-      {/* ============== STATS SECTION ============== */}
+      {/* Stats Section */}
       <section ref={statsRef} className="py-16 px-4 border-t border-[#2A302E]">
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
@@ -364,7 +378,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ============== FEATURES SECTION ============== */}
+      {/* Features Section */}
       <section id="features" className="py-20 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
@@ -393,7 +407,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ============== LANGUAGES SECTION ============== */}
+      {/* Languages Section */}
       <section id="languages" className="py-20 px-4 bg-[#161A19] border-y border-[#2A302E]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
@@ -419,7 +433,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ============== HOW IT WORKS ============== */}
+      {/* How It Works */}
       <section className="py-20 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
@@ -457,7 +471,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ============== TESTIMONIALS SECTION ============== */}
+      {/* Testimonials Section */}
       <section id="testimonials" className="py-20 px-4 bg-[#161A19] border-y border-[#2A302E]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
@@ -465,7 +479,7 @@ export const LandingPage: React.FC = () => {
               What Our <span className="text-[#10B981]">Students Say</span>
             </h2>
             <p className="text-[#9CA3A0] mt-4 max-w-2xl mx-auto">
-              Hear from real students who transformed their careers with NexLab.
+              Hear from real students across India who transformed their careers with NexLab.
             </p>
           </div>
 
@@ -484,6 +498,7 @@ export const LandingPage: React.FC = () => {
                   <div>
                     <p className="font-semibold text-[#EDEFEE]">{testimonial.name}</p>
                     <p className="text-xs text-[#9CA3A0]">{testimonial.role} • {testimonial.company}</p>
+                    <p className="text-xs text-[#5C6360]">📍 {testimonial.location}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-0.5 mb-3">
@@ -505,7 +520,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ============== FAQ SECTION ============== */}
+      {/* FAQ Section */}
       <section id="faq" className="py-20 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
@@ -536,7 +551,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ============== CTA SECTION ============== */}
+      {/* CTA Section */}
       <section className="py-20 px-4 border-t border-[#2A302E]">
         <div className="max-w-4xl mx-auto">
           <div className="bg-gradient-to-r from-[#10B981] to-[#059669] rounded-2xl p-8 md:p-12 text-center shadow-xl shadow-[#10B981]/10">
@@ -544,7 +559,7 @@ export const LandingPage: React.FC = () => {
               Ready to Start Learning?
             </h2>
             <p className="text-white/80 mb-6 max-w-2xl mx-auto">
-              Join thousands of students and start your coding journey today.
+              Join thousands of students across India and start your coding journey today.
             </p>
             {user ? (
               <Button variant="secondary" size="lg" onClick={() => navigate('/dashboard')}>
@@ -556,13 +571,13 @@ export const LandingPage: React.FC = () => {
               </Button>
             )}
             <p className="text-white/60 text-xs mt-4">
-              No credit card required • Free forever • Cancel anytime
+              No credit card required • Free forever • UPI & Indian payments accepted
             </p>
           </div>
         </div>
       </section>
 
-      {/* ============== FOOTER ============== */}
+      {/* Footer */}
       <footer className="bg-[#161A19] border-t border-[#2A302E] pt-12 pb-6 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
@@ -571,6 +586,7 @@ export const LandingPage: React.FC = () => {
               <Link to="/" className="flex items-center gap-2 mb-4">
                 <span className="text-2xl font-bold text-[#10B981]">Nex</span>
                 <span className="text-2xl font-bold text-[#EDEFEE]">Lab</span>
+                <span className="text-xs text-[#5C6360]">🇮🇳</span>
               </Link>
               <p className="text-sm text-[#9CA3A0] mb-4">
                 Learn, Code, and Grow with interactive courses and a powerful code sandbox.
@@ -587,6 +603,9 @@ export const LandingPage: React.FC = () => {
                 </a>
                 <a href="#" className="text-[#5C6360] hover:text-[#EDEFEE] transition-colors">
                   <Youtube className="w-5 h-5" />
+                </a>
+                <a href="#" className="text-[#5C6360] hover:text-[#EDEFEE] transition-colors">
+                  <Instagram className="w-5 h-5" />
                 </a>
               </div>
             </div>
@@ -615,19 +634,23 @@ export const LandingPage: React.FC = () => {
 
             {/* Contact */}
             <div>
-              <h4 className="font-semibold text-[#EDEFEE] mb-4">Contact</h4>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2 text-[#9CA3A0]">
-                  <Mail className="w-4 h-4" />
-                  support@nexlab.com
+              <h4 className="font-semibold text-[#EDEFEE] mb-4">Contact Us</h4>
+              <ul className="space-y-3 text-sm">
+                <li className="flex items-start gap-2 text-[#9CA3A0]">
+                  <Mail className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>support@nexlab.in</span>
                 </li>
-                <li className="flex items-center gap-2 text-[#9CA3A0]">
-                  <MapPin className="w-4 h-4" />
-                  San Francisco, CA
+                <li className="flex items-start gap-2 text-[#9CA3A0]">
+                  <Phone className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>+91 98765 43210</span>
                 </li>
-                <li className="flex items-center gap-2 text-[#9CA3A0]">
-                  <Phone className="w-4 h-4" />
-                  +1 (555) 123-4567
+                <li className="flex items-start gap-2 text-[#9CA3A0]">
+                  <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-xs leading-relaxed">
+                    Nexus Tower, Hitech City,<br />
+                    Hyderabad, Telangana - 500081<br />
+                    🇮🇳 India
+                  </span>
                 </li>
               </ul>
             </div>
@@ -635,11 +658,12 @@ export const LandingPage: React.FC = () => {
 
           {/* Bottom */}
           <div className="pt-8 border-t border-[#2A302E] flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-[#5C6360]">
-            <p>© {currentYear} NexLab. All rights reserved.</p>
+            <p>© {currentYear} NexLab. All rights reserved. 🇮🇳 Made in India</p>
             <div className="flex items-center gap-6">
               <a href="#" className="hover:text-[#9CA3A0] transition-colors">Terms</a>
               <a href="#" className="hover:text-[#9CA3A0] transition-colors">Privacy</a>
               <a href="#" className="hover:text-[#9CA3A0] transition-colors">Cookies</a>
+              <a href="#" className="hover:text-[#9CA3A0] transition-colors">Refund Policy</a>
             </div>
           </div>
         </div>
@@ -657,3 +681,5 @@ export const LandingPage: React.FC = () => {
     </div>
   );
 };
+
+export default LandingPage;

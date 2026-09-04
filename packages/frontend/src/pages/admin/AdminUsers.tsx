@@ -1,8 +1,9 @@
+// packages/frontend/src/pages/admin/AdminUsers.tsx
+
 import React, { useState, useEffect } from 'react';
-//import { useNavigate } from 'react-router-dom';
 import { 
   Users, Search, ChevronLeft, ChevronRight,
-  Edit2, Trash2, Eye
+  Edit2, Trash2, Eye, RefreshCw
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -69,7 +70,6 @@ export const AdminUsers: React.FC = () => {
     if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
       return;
     }
-    
     try {
       await api.delete(`/admin/students/${id}`);
       await fetchStudents();
@@ -110,49 +110,47 @@ export const AdminUsers: React.FC = () => {
   }
 
   return (
-    <div className="py-8 max-w-7xl mx-auto">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[#2A302E]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-[#2A302E]">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#EDEFEE] flex items-center gap-2">
-            <Users className="w-8 h-8 text-[#10B981]" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#EDEFEE] flex items-center gap-2">
+            <Users className="w-7 h-7 sm:w-8 sm:h-8 text-[#10B981]" />
             Students
           </h1>
           <p className="text-[#9CA3A0] mt-1">Manage and monitor all students on the platform</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={fetchStudents}
-            className="gap-1"
-          >
-            <Search className="w-4 h-4" />
-            Refresh
-          </Button>
-        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => { fetchStudents(); fetchStats(); }}
+          className="gap-1"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+        </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4">
           <p className="text-sm text-[#9CA3A0]">Total Students</p>
           <p className="text-2xl font-bold text-[#10B981]">{stats.totalStudents}</p>
         </div>
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4">
-          <p className="text-sm text-[#9CA3A0]">Active Students (30 days)</p>
+          <p className="text-sm text-[#9CA3A0]">Active (30 days)</p>
           <p className="text-2xl font-bold text-[#60A5FA]">{stats.activeStudents}</p>
         </div>
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4">
-          <p className="text-sm text-[#9CA3A0]">New Students (7 days)</p>
+          <p className="text-sm text-[#9CA3A0]">New (7 days)</p>
           <p className="text-2xl font-bold text-[#FBBF24]">{stats.newStudents}</p>
         </div>
       </div>
 
       {/* Search Bar */}
       <form onSubmit={handleSearch} className="mb-6">
-        <div className="flex gap-3">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5C6360]" />
             <input
               type="text"
@@ -185,7 +183,7 @@ export const AdminUsers: React.FC = () => {
       {/* Students Table */}
       <div className="bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[700px]">
             <thead>
               <tr className="border-b border-[#2A302E] bg-[#0D0F0F]">
                 <th className="text-left py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
@@ -206,9 +204,6 @@ export const AdminUsers: React.FC = () => {
                 <th className="text-center py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
                   Streak
                 </th>
-                <th className="text-center py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
-                  Joined
-                </th>
                 <th className="text-right py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
                   Actions
                 </th>
@@ -217,7 +212,7 @@ export const AdminUsers: React.FC = () => {
             <tbody>
               {students.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-[#9CA3A0]">
+                  <td colSpan={7} className="text-center py-12 text-[#9CA3A0]">
                     <Users className="w-12 h-12 mx-auto mb-4 opacity-40" />
                     No students found
                   </td>
@@ -230,7 +225,7 @@ export const AdminUsers: React.FC = () => {
                   >
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#10B981]/20 text-[#10B981] flex items-center justify-center font-semibold text-sm">
+                        <div className="w-9 h-9 rounded-full bg-[#10B981]/20 text-[#10B981] flex items-center justify-center font-semibold text-sm flex-shrink-0">
                           {student.name.charAt(0)}
                         </div>
                         <div>
@@ -257,11 +252,6 @@ export const AdminUsers: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span className="text-[#FBBF24]">{student.streak || 0}🔥</span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="text-xs text-[#5C6360]">
-                        {new Date(student.createdAt).toLocaleDateString()}
-                      </span>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -297,11 +287,11 @@ export const AdminUsers: React.FC = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A302E]">
-            <p className="text-sm text-[#5C6360]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#2A302E]">
+            <p className="text-sm text-[#5C6360] order-2 sm:order-1">
               Showing {students.length} of {totalStudents} students
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 order-1 sm:order-2">
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
@@ -322,34 +312,6 @@ export const AdminUsers: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Legend */}
-      <div className="mt-6 flex items-center justify-center gap-6 text-xs text-[#5C6360]">
-        <div className="flex items-center gap-1">
-          <span className="text-lg">🥇</span>
-          <span>Gold (Rank 1)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-lg">🥈</span>
-          <span>Silver (Rank 2)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-lg">🥉</span>
-          <span>Bronze (Rank 3)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-[#10B981]">●</span>
-          <span>Level 1-3</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-[#60A5FA]">●</span>
-          <span>Level 4-6</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-[#FBBF24]">●</span>
-          <span>Level 7-10</span>
-        </div>
       </div>
     </div>
   );

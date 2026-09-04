@@ -1,9 +1,12 @@
+// packages/frontend/src/components/CourseReviews.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Star, Calendar, Trash2, Edit2, X, Check } from 'lucide-react';
 import { api } from '../lib/api';
 import { Button } from './ui/Button';
 import { StarRating } from './ui/StarRating';
 import { useAuthStore } from '../stores/authStore';
+import { formatISTDate } from '../utils/dateUtils';
 
 interface Review {
   id: string;
@@ -112,10 +115,6 @@ export const CourseReviews: React.FC<CourseReviewsProps> = ({
     }
   };
 
-//   const getMaxDistribution = () => {
-//     return Math.max(...Object.values(distribution), 1);
-//   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -207,7 +206,7 @@ export const CourseReviews: React.FC<CourseReviewsProps> = ({
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <Button
                   variant="primary"
                   onClick={handleSubmitReview}
@@ -247,19 +246,19 @@ export const CourseReviews: React.FC<CourseReviewsProps> = ({
                 userReview?.id === review.id ? 'border-[#10B981]/30 bg-[#10B981]/5' : ''
               }`}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#10B981]/20 text-[#10B981] flex items-center justify-center font-semibold">
+                  <div className="w-10 h-10 rounded-full bg-[#10B981]/20 text-[#10B981] flex items-center justify-center font-semibold flex-shrink-0">
                     {review.user.name.charAt(0)}
                   </div>
                   <div>
                     <p className="font-medium text-[#EDEFEE]">{review.user.name}</p>
-                    <div className="flex items-center gap-2 text-xs text-[#5C6360]">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C6360]">
                       <StarRating rating={review.rating} size="sm" />
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {new Date(review.createdAt).toLocaleDateString()}
+                        {formatISTDate(review.createdAt, 'datetime')}
                       </span>
                     </div>
                   </div>
@@ -301,3 +300,5 @@ export const CourseReviews: React.FC<CourseReviewsProps> = ({
     </div>
   );
 };
+
+export default CourseReviews;

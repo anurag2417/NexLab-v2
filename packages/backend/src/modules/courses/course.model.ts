@@ -1,3 +1,5 @@
+// packages/backend/src/modules/courses/course.model.ts
+
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
 // Lesson sub-document schema
@@ -18,6 +20,7 @@ export interface ICourse extends Document {
   slug: string;
   description: string;
   thumbnail?: string;
+  coverImage?: string; // ✅ Added cover image field
   category: string;
   level: 'beginner' | 'intermediate' | 'advanced';
   lessons: ILesson[];
@@ -45,7 +48,8 @@ const CourseSchema = new Schema<ICourse>(
     title: { type: String, required: true, trim: true },
     slug: { type: String, unique: true, lowercase: true },
     description: { type: String, required: true },
-    thumbnail: { type: String }, // ImageKit URL
+    thumbnail: { type: String }, // Square thumbnail for cards
+    coverImage: { type: String }, // ✅ 16:9 cover image for banners
     category: { type: String, required: true },
     level: { 
       type: String, 

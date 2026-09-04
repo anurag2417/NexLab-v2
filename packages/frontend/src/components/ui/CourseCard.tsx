@@ -1,3 +1,5 @@
+// packages/frontend/src/components/ui/CourseCard.tsx
+
 import React from 'react';
 import { Button } from './Button';
 import { BookOpen, Clock, Users, Star } from 'lucide-react';
@@ -53,6 +55,17 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     return level.charAt(0).toUpperCase() + level.slice(1);
   };
 
+  // ✅ Format price in INR
+  const formatPrice = (amount: number): string => {
+    if (amount === 0) return 'Free';
+    // Format in Indian Rupees
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   return (
     <div className="bg-[#161A19] rounded-xl border border-[#2A302E] shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-all duration-300 overflow-hidden group">
       {/* Image Section */}
@@ -63,7 +76,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             alt={title}
             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
             onError={(e) => {
-              // Fallback if image fails to load
               e.currentTarget.style.display = 'none';
               e.currentTarget.parentElement?.classList.add('bg-gradient-to-br', 'from-[#10B981]/20', 'to-[#059669]/10');
               e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
@@ -84,10 +96,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           </div>
         )}
         
-        {/* Price Badge */}
+        {/* Price Badge - INR */}
         {price > 0 && (
           <div className="absolute bottom-3 left-3 bg-[#0D0F0F]/80 backdrop-blur-sm px-3 py-1 rounded-lg border border-[#2A302E]">
-            <span className="text-sm font-bold text-[#10B981]">${price}</span>
+            <span className="text-sm font-bold text-[#10B981]">{formatPrice(price)}</span>
           </div>
         )}
         
@@ -143,7 +155,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           )}
         </div>
 
-        {/* Progress Bar (if enrolled) */}
+        {/* Progress Bar */}
         {isEnrolled && (
           <div className="mt-4">
             <div className="flex justify-between text-xs text-[#9CA3A0] mb-1">
@@ -179,7 +191,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                 onClick={onEnroll}
                 className="flex-1"
               >
-                Enroll Now
+                {price === 0 ? 'Enroll Free' : `Enroll ${formatPrice(price)}`}
               </Button>
               <Button
                 size="sm"

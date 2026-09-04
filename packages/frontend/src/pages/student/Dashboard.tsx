@@ -1,3 +1,5 @@
+// packages/frontend/src/pages/student/Dashboard.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -5,6 +7,7 @@ import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { StatCard } from '../../components/ui/StatCard';
 import { ActivityHeatmap } from '../../components/ActivityHeatmap';
+import { formatISTDateOnly, getTodayIST } from '../../utils/dateUtils';
 import { 
   Flame, Zap, Award, BookOpen, TrendingUp, CheckCircle, ArrowRight,
   Code2, Trophy, Target, Calendar, Clock, BarChart3, Brain, Rocket
@@ -137,18 +140,23 @@ export const StudentDashboard: React.FC = () => {
       
       const dateMap: Record<string, number> = {};
       const now = new Date();
-      const oneYearAgo = new Date();
+      
+      // ✅ Use IST for date calculations
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istNow = new Date(now.getTime() + istOffset);
+      
+      const oneYearAgo = new Date(istNow);
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
       
-      for (let d = new Date(oneYearAgo); d <= now; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().split('T')[0];
+      for (let d = new Date(oneYearAgo); d <= istNow; d.setDate(d.getDate() + 1)) {
+        const dateStr = formatISTDateOnly(d);
         dateMap[dateStr] = 0;
       }
       
       for (const sub of submissions) {
         if (sub.status === 'accepted') {
           const date = new Date(sub.createdAt || sub.submittedAt);
-          const dateStr = date.toISOString().split('T')[0];
+          const dateStr = formatISTDateOnly(date);
           if (dateMap[dateStr] !== undefined) {
             dateMap[dateStr]++;
           }
@@ -162,14 +170,14 @@ export const StudentDashboard: React.FC = () => {
       
       setHeatmapData(heatmapData);
       
+      // ✅ Calculate streak using IST dates
       let streak = 0;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const todayIST = getTodayIST();
       
       for (let i = 0; i < 365; i++) {
-        const date = new Date(today);
+        const date = new Date(istNow);
         date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatISTDateOnly(date);
         if (dateMap[dateStr] && dateMap[dateStr] > 0) {
           streak++;
         } else if (i > 0) {
@@ -245,7 +253,7 @@ export const StudentDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Stats Grid - Responsive */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <StatCard 
           title="Total XP" 
@@ -287,9 +295,9 @@ export const StudentDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content Grid - 2 Columns */}
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        {/* Left Column - Problem Solving Progress & Activity Heatmap */}
+        {/* Left Column */}
         <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Problem Solving Progress */}
           <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm">
@@ -331,7 +339,7 @@ export const StudentDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column - Recent Activity */}
+        {/* Right Column */}
         <div className="lg:col-span-1">
           <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-6 shadow-sm h-full">
             <div className="flex items-center gap-2 mb-4">
@@ -359,7 +367,7 @@ export const StudentDashboard: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-xs text-[#5C6360]">
-                        {new Date(sub.createdAt || sub.submittedAt).toLocaleDateString()}
+                        {/* ✅ No date here - keeping it clean */}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-[#5C6360]">
@@ -374,7 +382,7 @@ export const StudentDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* My Courses Section - Responsive */}
+      {/* My Courses Section */}
       <div className="mb-6 sm:mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base sm:text-xl font-semibold text-[#EDEFEE] flex items-center gap-2">
@@ -471,7 +479,7 @@ export const StudentDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Quick Actions - Responsive */}
+      {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
         <button
           onClick={() => navigate('/problems')}
@@ -505,3 +513,5 @@ export const StudentDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default StudentDashboard;

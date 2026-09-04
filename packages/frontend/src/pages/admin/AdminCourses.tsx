@@ -1,8 +1,11 @@
+// packages/frontend/src/pages/admin/AdminCourses.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Edit, Trash2, Eye, EyeOff, Search, 
-  BookOpen, Users, Clock, CheckCircle, XCircle 
+  BookOpen, Users, Clock, CheckCircle, XCircle,
+  RefreshCw, Filter
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -37,7 +40,6 @@ export const AdminCourses: React.FC = () => {
     setLoading(true);
     try {
       const response = await api.get('/courses/admin/all');
-      //console.log('📚 Admin courses:', response.data);
       setCourses(response.data.data || []);
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -51,7 +53,6 @@ export const AdminCourses: React.FC = () => {
     try {
       const response = await api.patch(`/courses/${id}/publish`);
       setCourses(courses.map(c => c._id === id ? response.data.data : c));
-      // Show success message
       const newStatus = !currentStatus;
       alert(`Course ${newStatus ? 'published' : 'unpublished'} successfully!`);
     } catch (error) {
@@ -66,7 +67,6 @@ export const AdminCourses: React.FC = () => {
     if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
       return;
     }
-    
     setActionLoading(id);
     try {
       await api.delete(`/courses/${id}`);
@@ -104,21 +104,36 @@ export const AdminCourses: React.FC = () => {
   }
 
   return (
-    <div className="py-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-[#2A302E]">
         <div>
-          <h1 className="text-2xl font-bold text-[#EDEFEE]">Manage Courses</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#EDEFEE] flex items-center gap-2">
+            <BookOpen className="w-7 h-7 sm:w-8 sm:h-8 text-[#10B981]" />
+            Manage Courses
+          </h1>
           <p className="text-[#9CA3A0] mt-1">Create, edit, and publish your course content</p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => navigate('/admin/courses/create')}
-          className="gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Create Course
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={fetchCourses}
+            className="gap-1"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => navigate('/admin/courses/create')}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Course
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -136,7 +151,7 @@ export const AdminCourses: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4">
           <p className="text-sm text-[#9CA3A0]">Total Courses</p>
           <p className="text-2xl font-bold text-[#EDEFEE]">{courses.length}</p>
@@ -170,13 +185,13 @@ export const AdminCourses: React.FC = () => {
           {filteredCourses.map((course) => (
             <div
               key={course._id}
-              className="bg-[#161A19] border border-[#2A302E] rounded-xl p-5 shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-shadow"
+              className="bg-[#161A19] border border-[#2A302E] rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-[#10B981]/5 hover:shadow-lg transition-shadow"
             >
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 {/* Course Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1 flex-wrap">
-                    <h3 className="text-lg font-semibold text-[#EDEFEE] truncate">
+                    <h3 className="text-base sm:text-lg font-semibold text-[#EDEFEE] truncate">
                       {course.title}
                     </h3>
                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${getLevelBadge(course.level)}`}>
@@ -195,7 +210,7 @@ export const AdminCourses: React.FC = () => {
                     )}
                   </div>
                   <p className="text-sm text-[#9CA3A0] line-clamp-1">{course.description}</p>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-[#5C6360]">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2 text-xs text-[#5C6360]">
                     <span>Category: {course.category}</span>
                     <span>•</span>
                     <span>${course.price}</span>

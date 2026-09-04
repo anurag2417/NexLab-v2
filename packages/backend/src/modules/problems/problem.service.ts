@@ -71,11 +71,12 @@ export class ProblemService {
     return !!result;
   }
 
-  // ---------- SUBMIT SOLUTION WITH DETAILED TEST RESULTS ----------
+  // ---------- SUBMIT SOLUTION ----------
   static async submitSolution(
     problemId: string,
     userId: string,
-    code: string
+    code: string,
+    isSubmission: boolean = true
   ): Promise<any> {
     const problem = await Problem.findById(problemId);
     if (!problem) {
@@ -96,10 +97,9 @@ export class ProblemService {
       };
     }
 
-    console.log(`🔍 Running ${testCases.length} test cases...`);
-    console.log(`📝 Code: ${code.substring(0, 100)}...`);
+    console.log(`🔍 Running ${testCases.length} test cases... (isSubmission: ${isSubmission})`);
 
-    // ✅ Run ALL test cases (visible + hidden)
+    // Run ALL test cases
     const testResults: any[] = [];
     let passedTests = 0;
     let totalTests = testCases.length;
@@ -112,7 +112,6 @@ export class ProblemService {
       const testCase = testCases[i];
       const isHidden = testCase.isHidden || false;
       
-      // Create result object for this test case
       const result: any = {
         testCaseIndex: i,
         input: testCase.input,
@@ -126,8 +125,6 @@ export class ProblemService {
       };
 
       try {
-        console.log(`🧪 Running test case ${i + 1}/${testCases.length}: input="${testCase.input}"`);
-        
         const execResult = await this.executeCodeDirectly(code, testCase.input);
         
         result.runtime = execResult.runtime || 0;
@@ -135,34 +132,28 @@ export class ProblemService {
         totalRuntime += result.runtime;
         maxMemory = Math.max(maxMemory, result.memory);
 
-        // ✅ Get actual output
         const actualOutput = execResult.output.trim();
         const expectedOutput = testCase.expectedOutput.trim();
 
         result.got = actualOutput;
 
-        // ✅ Compare outputs
         if (actualOutput === expectedOutput) {
           result.passed = true;
           passedTests++;
-          console.log(`✅ Test case ${i + 1} PASSED`);
         } else {
           result.passed = false;
           status = 'wrong_answer';
           errorMessage = `Test case ${i + 1} failed. Expected: "${expectedOutput}", Got: "${actualOutput}"`;
-          console.log(`❌ Test case ${i + 1} FAILED`);
         }
 
         testResults.push(result);
 
       } catch (error: any) {
-        console.error(`❌ Test case ${i + 1} error:`, error);
         result.got = 'Error';
         result.passed = false;
         result.error = error.message || 'Runtime error';
         testResults.push(result);
         
-        // If this is a visible test case, mark as runtime error
         if (!isHidden) {
           status = 'runtime_error';
           errorMessage = error.message || 'Runtime error occurred';
@@ -170,56 +161,56 @@ export class ProblemService {
       }
     }
 
-    // Calculate averages
     const avgRuntime = testResults.length > 0 ? Math.round(totalRuntime / testResults.length) : 0;
 
-    // ✅ Determine final status
-    // Only mark as accepted if ALL test cases passed
     if (passedTests === totalTests) {
       status = 'accepted';
       errorMessage = '';
     } else if (status === 'accepted') {
-      // If some tests failed but no runtime error
       status = 'wrong_answer';
       errorMessage = `${totalTests - passedTests} test case(s) failed`;
     }
 
-    console.log(`📊 Results: ${passedTests}/${totalTests} tests passed, Status: ${status}`);
+    // ✅ ONLY save submission if isSubmission is true
+    let submission = null;
+    if (isSubmission) {
+      console.log('💾 Saving submission to database...');
+      
+      submission = await ProblemSubmission.create({
+        problemId: new Types.ObjectId(problemId),
+        userId: new Types.ObjectId(userId),
+        language: 'javascript',
+        code,
+        status,
+        passedTests,
+        totalTests,
+        runtime: avgRuntime,
+        memory: maxMemory,
+        errorMessage: errorMessage || undefined,
+        submittedAt: new Date(),
+      });
 
-    // ✅ Save submission to database
-    const submission = await ProblemSubmission.create({
-      problemId: new Types.ObjectId(problemId),
-      userId: new Types.ObjectId(userId),
-      language: 'javascript',
-      code,
-      status,
-      passedTests,
-      totalTests,
-      runtime: avgRuntime,
-      memory: maxMemory,
-      errorMessage: errorMessage || undefined,
-      submittedAt: new Date(),
-    });
-
-    // ✅ Award XP if ALL tests passed
-    if (status === 'accepted') {
-      const xpGain = this.getXpForDifficulty(problem.difficulty);
-      const user = await User.findById(userId);
-      if (user) {
-        user.xp = (user.xp || 0) + xpGain;
-        const newLevel = Math.floor(user.xp / 100) + 1;
-        if (newLevel > user.level) {
-          user.level = newLevel;
+      // ✅ Only award XP on actual submission
+      if (status === 'accepted') {
+        const xpGain = this.getXpForDifficulty(problem.difficulty);
+        const user = await User.findById(userId);
+        if (user) {
+          user.xp = (user.xp || 0) + xpGain;
+          const newLevel = Math.floor(user.xp / 100) + 1;
+          if (newLevel > user.level) {
+            user.level = newLevel;
+          }
+          await user.save();
+          await LeaderboardService.updateUserScore(userId, user.xp);
+          console.log(`🏆 Awarded ${xpGain} XP to user ${userId}`);
         }
-        await user.save();
-        await LeaderboardService.updateUserScore(userId, user.xp);
-        console.log(`🏆 Awarded ${xpGain} XP to user ${userId}`);
       }
+    } else {
+      console.log('⏭️ Skipping submission save (Run mode)');
     }
 
-    // ✅ Return detailed results
     return {
-      submission: {
+      submission: submission ? {
         id: submission._id,
         status: submission.status,
         passedTests: submission.passedTests,
@@ -227,9 +218,8 @@ export class ProblemService {
         runtime: submission.runtime,
         memory: submission.memory,
         errorMessage: submission.errorMessage,
-        createdAt: submission.submittedAt,
-      },
-      // ✅ Full test results for display
+        createdAt: submission.get('createdAt'),
+      } : null,
       testResults: testResults.map((tr: any) => ({
         input: tr.input,
         expected: tr.expected,
@@ -246,10 +236,10 @@ export class ProblemService {
       runtime: avgRuntime,
       memory: maxMemory,
       errorMessage,
+      isSubmission,
     };
   }
 
-  // ---------- DIRECT CODE EXECUTION ----------
   static async executeCodeDirectly(
     code: string,
     input: string
@@ -263,7 +253,6 @@ export class ProblemService {
     const fileId = randomUUID();
     const filePath = path.join(tempDir, `code_${fileId}.js`);
 
-    // ✅ Detect function name
     const patterns = [
       /var\s+(\w+)\s*=\s*function/,
       /let\s+(\w+)\s*=\s*function/,
@@ -284,24 +273,20 @@ export class ProblemService {
     }
     
     if (!functionName) {
-      throw new Error('Could not detect a function definition in your code. Make sure you define a function.');
+      throw new Error('Could not detect a function definition in your code.');
     }
 
-    // ✅ Validate input
     try {
       new Function(`return [${input}]`)();
     } catch {
       throw new Error(`Test case input is not valid JS arguments: "${input}". Use format like: 5, 10`);
     }
 
-    // ✅ Create wrapper with detailed error handling
     const wrapperCode = `
 ${code}
 
-// ✅ Execute with test values
 try {
   const result = ${functionName}(${input});
-  // Ensure clean output
   console.log(String(result).trim());
 } catch (error) {
   console.error('Runtime Error:', error.message);
@@ -310,8 +295,6 @@ try {
 `;
     
     await fs.writeFile(filePath, wrapperCode, 'utf-8');
-
-    console.log(`📄 Running test: ${functionName}(${input})`);
 
     const startTime = Date.now();
     let stdout = '';
@@ -330,10 +313,7 @@ try {
       stdout = stdout.trim();
       stderr = stderr.trim();
       
-      console.log(`📤 Output: "${stdout}"`);
-      
     } catch (error: any) {
-      console.error('❌ Execution error:', error);
       if (error.stdout) stdout = error.stdout.trim();
       if (error.stderr) stderr = error.stderr.trim();
       

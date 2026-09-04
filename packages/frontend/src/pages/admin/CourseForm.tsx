@@ -1,9 +1,11 @@
+// packages/frontend/src/pages/admin/CourseForm.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Image, Upload, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { ImageUpload } from '../../components/ImageUpload';
@@ -15,6 +17,7 @@ const courseSchema = z.object({
   level: z.enum(['beginner', 'intermediate', 'advanced']),
   price: z.number().min(0, 'Price must be at least 0'),
   thumbnail: z.string().optional(),
+  coverImage: z.string().optional(), // ✅ Added cover image field
   lessons: z.array(z.object({
     title: z.string().min(1, 'Lesson title is required'),
     description: z.string().optional(),
@@ -33,8 +36,9 @@ export const CourseForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!!id);
   const [thumbnail, setThumbnail] = useState<string>('');
+  const [coverImage, setCoverImage] = useState<string>(''); // ✅ Cover image state
 
-  const { register, control, handleSubmit, formState: { errors }, reset, setValue } = useForm<CourseFormData>({
+  const { register, control, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
       title: '',
@@ -43,6 +47,7 @@ export const CourseForm: React.FC = () => {
       level: 'beginner',
       price: 0,
       thumbnail: '',
+      coverImage: '',
       lessons: [{ title: '', videoUrl: '', order: 1, isFree: false }],
     },
   });
@@ -60,6 +65,7 @@ export const CourseForm: React.FC = () => {
           const response = await api.get(`/courses/${id}`);
           const course = response.data.data;
           setThumbnail(course.thumbnail || '');
+          setCoverImage(course.coverImage || '');
           reset({
             title: course.title,
             description: course.description,
@@ -67,6 +73,7 @@ export const CourseForm: React.FC = () => {
             level: course.level,
             price: course.price,
             thumbnail: course.thumbnail || '',
+            coverImage: course.coverImage || '',
             lessons: course.lessons?.length ? course.lessons : [{ title: '', videoUrl: '', order: 1, isFree: false }],
           });
         } catch (error) {
@@ -96,6 +103,15 @@ export const CourseForm: React.FC = () => {
     }
   };
 
+  // ✅ Format price in INR for display
+  const formatPrice = (amount: number): string => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   if (fetching) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -105,7 +121,7 @@ export const CourseForm: React.FC = () => {
   }
 
   return (
-    <div className="py-8 max-w-4xl">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1200px] mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button
@@ -189,14 +205,14 @@ export const CourseForm: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-[#9CA3A0] mb-1.5">
-                Price ($) *
+                Price (₹) *
               </label>
               <input
                 {...register('price', { valueAsNumber: true })}
                 type="number"
                 step="0.01"
                 className="w-full px-4 py-2.5 bg-[#0D0F0F] border border-[#2A302E] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] text-[#EDEFEE] placeholder-[#5C6360] transition-all duration-200"
-                placeholder="0.00"
+                placeholder="499"
               />
               {errors.price && (
                 <p className="text-[#F87171] text-xs mt-1">{errors.price.message}</p>
@@ -204,7 +220,7 @@ export const CourseForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Image Upload */}
+          {/* ✅ Thumbnail Upload */}
           <div className="mt-4">
             <ImageUpload
               value={thumbnail}
@@ -212,13 +228,37 @@ export const CourseForm: React.FC = () => {
                 setThumbnail(value);
                 setValue('thumbnail', value);
               }}
-              label="Course Thumbnail"
-              placeholder="Upload a course image..."
-              aspectRatio="16:9"
+              label="Course Thumbnail (Square, 512x512)"
+              placeholder="Upload a course thumbnail..."
+              aspectRatio="square"
             />
             {errors.thumbnail && (
               <p className="text-[#F87171] text-xs mt-1">{errors.thumbnail.message}</p>
             )}
+          </div>
+
+          {/* ✅ Cover Image Upload */}
+          <div className="mt-4">
+            <ImageUpload
+              value={coverImage}
+              onChange={(value) => {
+                setCoverImage(value);
+                setValue('coverImage', value);
+              }}
+              label="Cover Image (16:9, 1920x1080)"
+              placeholder="Upload a cover image for the course..."
+              aspectRatio="16:9"
+            />
+            {errors.coverImage && (
+              <p className="text-[#F87171] text-xs mt-1">{errors.coverImage.message}</p>
+            )}
+          </div>
+
+          <div className="mt-4 p-4 bg-[#0D0F0F] rounded-lg border border-[#2A302E]">
+            <p className="text-xs text-[#5C6360]">
+              💡 <strong>Pro Tip:</strong> Upload a cover image (16:9 ratio) for the course banner and a thumbnail (square) for course cards. 
+              Images will be automatically uploaded to ImageKit CDN.
+            </p>
           </div>
         </div>
 
@@ -339,3 +379,5 @@ export const CourseForm: React.FC = () => {
     </div>
   );
 };
+
+export default CourseForm;

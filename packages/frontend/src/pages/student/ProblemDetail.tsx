@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+// packages/frontend/src/pages/student/ProblemDetail.tsx
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Play, Loader2, Zap, Copy, Check, 
   Lightbulb, ChevronDown, ChevronUp, CheckCircle, 
   XCircle, Clock, AlertCircle, Terminal,
-  ChevronRight, ChevronLeft, Settings, Maximize2, Minimize2, X,
-  GripVertical, GripHorizontal, FileText, History, Layers
+  ChevronRight, ChevronLeft, Settings, Maximize2, Minimize2,
+  GripVertical, GripHorizontal, FileText, History, Layers, X
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -54,6 +56,7 @@ interface SubmissionResult {
   memory: number;
   errorMessage?: string;
   testResults?: TestResult[];
+  isSubmission?: boolean;
   submission?: {
     id: string;
     status: string;
@@ -64,6 +67,26 @@ interface SubmissionResult {
     errorMessage: string;
     createdAt: string;
   };
+}
+
+interface Submission {
+  _id: string;
+  problemId: {
+    _id: string;
+    title: string;
+    difficulty: string;
+  } | string;
+  userId: string;
+  language: string;
+  code: string;
+  status: string;
+  passedTests: number;
+  totalTests: number;
+  runtime: number;
+  memory: number;
+  errorMessage?: string;
+  createdAt: string;
+  submittedAt: string;
 }
 
 export const ProblemDetail: React.FC = () => {
@@ -82,7 +105,7 @@ export const ProblemDetail: React.FC = () => {
   const [fontSize, setFontSize] = useState(14);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<'testcases' | 'submissions' | 'history' | 'results'>('testcases');
-  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
   const [codeHistory, setCodeHistory] = useState<string[]>([]);
   const [isEditorMaximized, setIsEditorMaximized] = useState(false);
   
@@ -97,6 +120,17 @@ export const ProblemDetail: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const verticalDragRef = useRef<HTMLDivElement>(null);
   const horizontalDragRef = useRef<HTMLDivElement>(null);
+
+  // ✅ Get problem-specific submissions
+  const problemSubmissions = useMemo(() => {
+    if (!problem) return [];
+    return allSubmissions.filter((sub: Submission) => {
+      const problemId = typeof sub.problemId === 'string' 
+        ? sub.problemId 
+        : sub.problemId?._id;
+      return problemId === problem._id;
+    });
+  }, [allSubmissions, problem]);
 
   // Configure Monaco
   useEffect(() => {
@@ -130,9 +164,9 @@ export const ProblemDetail: React.FC = () => {
     }
   }, [code, slug]);
 
-  // ✅ Switch to results tab when submission result is received
+  // Switch to results tab when submission result is received
   useEffect(() => {
-    if (result && result.testResults && result.testResults.length > 0) {
+    if (result && result.testResults && result.testResults.length > 0 && result.isSubmission) {
       setActiveTab('results');
     }
   }, [result]);
@@ -262,10 +296,10 @@ var sumOfTwoNumbers = function(a, b) {
   const fetchSubmissions = async () => {
     try {
       const response = await api.get('/problems/submissions');
-      setSubmissions(response.data.data || []);
+      setAllSubmissions(response.data.data || []);
     } catch (error: any) {
       if (error.response?.status === 404) {
-        setSubmissions([]);
+        setAllSubmissions([]);
       }
     }
   };
@@ -293,6 +327,7 @@ var sumOfTwoNumbers = function(a, b) {
     localStorage.setItem(`code_history_${slug}`, JSON.stringify(updatedHistory));
   };
 
+  // ✅ UPDATED: Run code (does NOT count as submission)
   const handleRunCode = async () => {
     if (!code.trim()) {
       setResult({
@@ -302,7 +337,8 @@ var sumOfTwoNumbers = function(a, b) {
         runtime: 0,
         memory: 0,
         errorMessage: 'Please write your solution first.',
-        testResults: []
+        testResults: [],
+        isSubmission: false,
       });
       return;
     }
@@ -311,17 +347,20 @@ var sumOfTwoNumbers = function(a, b) {
     setResult(null);
 
     try {
+      // ✅ Pass isSubmission: false for Run
       const response = await api.post(`/problems/${slug}/submit`, {
         code: code,
+        isSubmission: false,
       });
       
       const data = response.data.data;
       setResult({
         ...data,
-        testResults: data.testResults || []
+        testResults: data.testResults || [],
+        isSubmission: false,
       });
       
-      await fetchSubmissions();
+      // ✅ Don't fetch submissions on run (no new submission created)
       
       if (outputRef.current) {
         outputRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -335,13 +374,15 @@ var sumOfTwoNumbers = function(a, b) {
         runtime: 0,
         memory: 0,
         errorMessage: error.response?.data?.message || 'Failed to execute code',
-        testResults: []
+        testResults: [],
+        isSubmission: false,
       });
     } finally {
       setIsRunning(false);
     }
   };
 
+  // ✅ UPDATED: Submit code (DOES count as submission)
   const handleSubmit = async () => {
     if (!code.trim()) {
       setResult({
@@ -351,7 +392,8 @@ var sumOfTwoNumbers = function(a, b) {
         runtime: 0,
         memory: 0,
         errorMessage: 'Please write your solution first.',
-        testResults: []
+        testResults: [],
+        isSubmission: true,
       });
       return;
     }
@@ -360,21 +402,23 @@ var sumOfTwoNumbers = function(a, b) {
     setResult(null);
 
     try {
+      // ✅ Pass isSubmission: true for Submit
       const response = await api.post(`/problems/${slug}/submit`, {
         code: code,
+        isSubmission: true,
       });
 
       const data = response.data.data;
       
-      // ✅ Store the full result with test details
       setResult({
         ...data,
-        testResults: data.testResults || []
+        testResults: data.testResults || [],
+        isSubmission: true,
       });
       
+      // ✅ Only fetch submissions on actual submission
       await fetchSubmissions();
       
-      // ✅ Automatically switch to results tab
       setActiveTab('results');
       
       if (outputRef.current) {
@@ -389,7 +433,8 @@ var sumOfTwoNumbers = function(a, b) {
         runtime: 0,
         memory: 0,
         errorMessage: error.response?.data?.message || 'Failed to submit',
-        testResults: []
+        testResults: [],
+        isSubmission: true,
       });
     } finally {
       setIsSubmitting(false);
@@ -467,7 +512,6 @@ var sumOfTwoNumbers = function(a, b) {
 
   const getTestCaseResult = (index: number) => {
     if (!result?.testResults) return null;
-    // Filter only visible test results
     const visibleResults = result.testResults.filter((r: TestResult) => !r.isHidden);
     return visibleResults[index] || null;
   };
@@ -490,9 +534,7 @@ var sumOfTwoNumbers = function(a, b) {
 
   // Check if results are available
   const hasResults = result && result.testResults && result.testResults.length > 0;
-  const allVisiblePassed: boolean = Boolean(
-    hasResults && getPassedVisibleCount() === getTotalVisibleCount()
-  );
+  const allVisiblePassed = Boolean(hasResults && getPassedVisibleCount() === getTotalVisibleCount());
 
   if (loading) {
     return (
@@ -851,7 +893,7 @@ var sumOfTwoNumbers = function(a, b) {
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
-                Submissions ({submissions.length})
+                Submissions ({problemSubmissions.length})
               </button>
               <button
                 onClick={() => setActiveTab('history')}
@@ -890,7 +932,12 @@ var sumOfTwoNumbers = function(a, b) {
               )}
 
               {activeTab === 'submissions' && (
-                <SubmissionHistory submissions={submissions} getStatusIcon={getStatusIcon} getStatusColor={getStatusColor} />
+                <SubmissionHistory 
+                  submissions={problemSubmissions} 
+                  getStatusIcon={getStatusIcon} 
+                  getStatusColor={getStatusColor}
+                  problemTitle={problem.title}
+                />
               )}
 
               {activeTab === 'history' && (
@@ -907,7 +954,7 @@ var sumOfTwoNumbers = function(a, b) {
   );
 };
 
-// ✅ NEW: Results Tab Component
+// ✅ Results Tab Component
 const ResultsTab: React.FC<{
   result: SubmissionResult | null;
   visibleTestCases: any[];
@@ -937,8 +984,27 @@ const ResultsTab: React.FC<{
   const totalCount = getTotalVisibleCount();
   const hiddenCount = result.totalTests - totalCount;
 
+  // Check if this was a submission or just a run
+  const isSubmission = result.isSubmission !== false;
+
   return (
     <div className="space-y-4">
+      {/* Submission/Run Badge */}
+      <div className="flex items-center gap-2">
+        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+          isSubmission 
+            ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30' 
+            : 'bg-[#60A5FA]/20 text-[#60A5FA] border border-[#60A5FA]/30'
+        }`}>
+          {isSubmission ? '📝 Submission' : '⚡ Run (Not Saved)'}
+        </span>
+        {!isSubmission && (
+          <span className="text-xs text-[#5C6360]">
+            Results from running code - not counted as submission
+          </span>
+        )}
+      </div>
+
       {/* Summary Card */}
       <div className={`p-4 rounded-lg border ${
         allVisiblePassed && result.status === 'accepted'
@@ -1084,6 +1150,7 @@ const ResultsTab: React.FC<{
   );
 };
 
+// ✅ Status helpers for ResultsTab
 const getStatusColor = (status: string) => {
   if (status === 'accepted') return 'text-[#10B981]';
   if (status === 'wrong_answer' || status === 'runtime_error' || status === 'compile_error') return 'text-[#F87171]';

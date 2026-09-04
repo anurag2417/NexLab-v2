@@ -1,10 +1,13 @@
+// packages/frontend/src/layouts/RootLayout.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { 
   Home, BookOpen, Code2, Trophy, User, 
   Users, BarChart3, GraduationCap, LogOut, Menu, X,
-  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight
+  LayoutDashboard, Sparkles, ChevronLeft, ChevronRight,
+  Settings, FileJson
 } from 'lucide-react';
 
 // Student Navigation
@@ -22,6 +25,7 @@ const adminNav = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Overview' },
   { to: '/admin/courses', icon: GraduationCap, label: 'Manage Courses' },
   { to: '/admin/problems', icon: Code2, label: 'Coding Problems' },
+  { to: '/admin/problems/import', icon: FileJson, label: 'Bulk Import' },
   { to: '/admin/users', icon: Users, label: 'Students' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
 ];
@@ -29,7 +33,11 @@ const adminNav = [
 export const RootLayout: React.FC = () => {
   const { user, logout } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // Persist sidebar state
+    const saved = localStorage.getItem('sidebar-collapsed');
+    return saved === 'true';
+  });
   const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
 
@@ -43,7 +51,6 @@ export const RootLayout: React.FC = () => {
       setIsMobile(mobile);
       if (mobile) {
         setIsSidebarOpen(false);
-        setIsCollapsed(false);
       } else {
         setIsSidebarOpen(true);
       }
@@ -53,6 +60,11 @@ export const RootLayout: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Save sidebar state
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', String(isCollapsed));
+  }, [isCollapsed]);
 
   const handleLogout = async () => {
     await logout();
@@ -67,7 +79,6 @@ export const RootLayout: React.FC = () => {
     }
   };
 
-  // ✅ Fixed: Sidebar is always fixed on desktop, collapsible on mobile
   const sidebarWidth = isCollapsed ? 'w-20' : 'w-72';
   const isSidebarVisible = isMobile ? isSidebarOpen : true;
 
@@ -83,7 +94,7 @@ export const RootLayout: React.FC = () => {
         />
       )}
 
-      {/* ✅ Sidebar - Fixed on all screen sizes */}
+      {/* Sidebar */}
       <aside
         className={`
           ${isMobile ? 'fixed' : 'fixed'} 
@@ -173,7 +184,7 @@ export const RootLayout: React.FC = () => {
           )}
         </div>
 
-        {/* ✅ Collapse Toggle - Always visible on desktop */}
+        {/* Collapse Toggle */}
         {!isMobile && (
           <button
             onClick={toggleSidebar}
@@ -201,7 +212,7 @@ export const RootLayout: React.FC = () => {
         </button>
       </div>
 
-      {/* ✅ Main Content - Account for sidebar width */}
+      {/* ✅ Main Content */}
       <main 
         className={`
           flex-1 min-w-0 w-full overflow-y-auto
@@ -215,7 +226,7 @@ export const RootLayout: React.FC = () => {
           overflowY: 'auto',
         }}
       >
-        <div className="h-full w-full">
+        <div className="w-full min-h-full">
           <Outlet />
         </div>
       </main>

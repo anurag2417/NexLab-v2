@@ -33,6 +33,7 @@ const updateProblemSchema = createProblemSchema.partial();
 
 const submitProblemSchema = z.object({
   code: z.string().min(1, 'Code is required'),
+  isSubmission: z.boolean().optional().default(true), // ✅ New field
 });
 
 export class ProblemController {
@@ -246,14 +247,14 @@ export class ProblemController {
     }
   }
 
-  // ✅ UPDATED: Submit Solution with detailed results
+  // ✅ UPDATED: Submit Solution with isSubmission flag
   static async submitSolution(req: Request, res: Response) {
     try {
       const { slug } = req.params;
       const userId = req.userId;
-      const { code } = req.body;
+      const { code, isSubmission = true } = req.body; // ✅ Default to true for submit
       
-      console.log(`📝 Submitting solution for ${slug}`);
+      console.log(`📝 ${isSubmission ? 'SUBMITTING' : 'RUNNING'} solution for ${slug}`);
       console.log(`👤 User ID: ${userId}`);
 
       if (!code || code.trim().length === 0) {
@@ -278,19 +279,17 @@ export class ProblemController {
         });
       }
 
-      // ✅ Get detailed submission results
       const result = await ProblemService.submitSolution(
         problem._id.toString(),
         userId,
         code
       );
 
-      console.log(`✅ Submission result: ${result.status} (${result.passedTests}/${result.totalTests} tests passed)`);
+      console.log(`✅ ${isSubmission ? 'Submission' : 'Run'} result: ${result.status} (${result.passedTests}/${result.totalTests} tests passed)`);
 
       res.status(200).json({
         success: true,
         data: {
-          // ✅ Return full results with test details
           status: result.status,
           passedTests: result.passedTests,
           totalTests: result.totalTests,
@@ -299,6 +298,7 @@ export class ProblemController {
           errorMessage: result.errorMessage,
           testResults: result.testResults || [],
           submission: result.submission,
+          isSubmission: isSubmission, // ✅ Return the flag
         },
       });
     } catch (error: any) {
