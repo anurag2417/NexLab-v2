@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { BrandLogo } from '../components/BrandLogo';
 import { 
   Home, BookOpen, Code2, Trophy, User, 
   Users, BarChart3, GraduationCap, LogOut, Menu, X,
@@ -34,7 +35,6 @@ export const RootLayout: React.FC = () => {
   const { user, logout } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    // Persist sidebar state
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved === 'true';
   });
@@ -44,7 +44,6 @@ export const RootLayout: React.FC = () => {
   const isAdmin = user?.role === 'admin';
   const navItems = isAdmin ? adminNav : studentNav;
 
-  // Handle responsive sidebar
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 1024;
@@ -61,7 +60,6 @@ export const RootLayout: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Save sidebar state
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(isCollapsed));
   }, [isCollapsed]);
@@ -109,22 +107,12 @@ export const RootLayout: React.FC = () => {
           shadow-2xl
         `}
       >
-        {/* Branding */}
+        {/* Branding - Using BrandLogo */}
         <div className={`px-4 h-16 flex items-center border-b border-[#2A302E] flex-shrink-0 ${isCollapsed ? 'justify-center' : 'px-6'}`}>
           {!isCollapsed ? (
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-[#10B981]">Nex</span>
-              <span className="text-2xl font-bold text-[#EDEFEE]">Lab</span>
-              <Sparkles className="w-4 h-4 text-[#10B981] ml-1" />
-              <span className="ml-2 text-xs font-medium text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full border border-[#10B981]/20 whitespace-nowrap">
-                {isAdmin ? 'Admin' : 'Student'}
-              </span>
-            </div>
+            <BrandLogo size="md" showText={true} />
           ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-[#10B981]">N</span>
-              <span className="text-2xl font-bold text-[#EDEFEE]">L</span>
-            </div>
+            <BrandLogo size="md" showText={false} />
           )}
         </div>
 
@@ -212,7 +200,7 @@ export const RootLayout: React.FC = () => {
         </button>
       </div>
 
-      {/* ✅ Main Content */}
+      {/* Main Content */}
       <main 
         className={`
           flex-1 min-w-0 w-full overflow-y-auto

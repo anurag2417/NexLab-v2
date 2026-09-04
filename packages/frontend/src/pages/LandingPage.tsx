@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { BrandLogo } from '../components/BrandLogo';
 import { Button } from '../components/ui/Button';
 import { 
   BookOpen, Code2, Trophy, Users, Sparkles, 
@@ -209,12 +210,8 @@ export const LandingPage: React.FC = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D0F0F]/95 backdrop-blur-sm border-b border-[#2A302E]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-[#10B981]">Nex</span>
-              <span className="text-2xl font-bold text-[#EDEFEE]">Lab</span>
-              <Sparkles className="w-4 h-4 text-[#10B981]" />
-            </Link>
+            {/* Logo - Using BrandLogo */}
+            <BrandLogo size="md" showText={true} />
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-6">
@@ -583,12 +580,8 @@ export const LandingPage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
-              <Link to="/" className="flex items-center gap-2 mb-4">
-                <span className="text-2xl font-bold text-[#10B981]">Nex</span>
-                <span className="text-2xl font-bold text-[#EDEFEE]">Lab</span>
-                <span className="text-xs text-[#5C6360]">🇮🇳</span>
-              </Link>
-              <p className="text-sm text-[#9CA3A0] mb-4">
+              <BrandLogo size="lg" showText={true} />
+              <p className="text-sm text-[#9CA3A0] mt-4 mb-4">
                 Learn, Code, and Grow with interactive courses and a powerful code sandbox.
               </p>
               <div className="flex items-center gap-4">

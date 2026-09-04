@@ -1,3 +1,5 @@
+// packages/frontend/src/components/BrandLogo.tsx
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -14,8 +16,11 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   size = 'md',
   rounded = 'full',
 }) => {
-  // Replace this with your actual brand logo URL from ImageKit
+  // ✅ Replace this URL with your actual logo URL from ImageKit
   const logoUrl = 'https://ik.imagekit.io/djimomx5ff/NexLab-Logo-100Kb.png';
+  
+  // ✅ Replace with your favicon URL from ImageKit (16x16 or 32x32)
+  const faviconUrl = 'https://ik.imagekit.io/djimomx5ff/favicon.png';
   
   const sizes = {
     sm: 'h-8 w-8',
@@ -28,7 +33,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     sm: 'rounded-sm',
     md: 'rounded-md',
     lg: 'rounded-lg',
-    full: 'rounded-full', // 50% border radius
+    full: 'rounded-full',
   };
 
   return (
@@ -51,3 +56,5 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     </Link>
   );
 };
+
+export default BrandLogo;
