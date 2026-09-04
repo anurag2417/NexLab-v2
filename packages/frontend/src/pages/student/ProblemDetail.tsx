@@ -4,8 +4,8 @@ import {
   ArrowLeft, Play, Loader2, Zap, Copy, Check, 
   Lightbulb, ChevronDown, ChevronUp, CheckCircle, 
   XCircle, Clock, AlertCircle, Terminal,
-  ChevronRight, ChevronLeft, Settings, Maximize2, Minimize2,
-  GripVertical, Calendar
+  ChevronRight, ChevronLeft, Settings, Maximize2, Minimize2, X,
+  GripVertical, GripHorizontal
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -72,14 +72,23 @@ export const ProblemDetail: React.FC = () => {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [codeHistory, setCodeHistory] = useState<string[]>([]);
   const [isEditorMaximized, setIsEditorMaximized] = useState(false);
-  const [editorHeight, setEditorHeight] = useState(65);
+  
+  // ✅ NEW: Split view states for vertical divider (editor vs test cases)
+  const [splitPosition, setSplitPosition] = useState(60); // Editor takes 60% height
+  const [isDragging, setIsDragging] = useState(false);
+  const [isBottomPanelMaximized, setIsBottomPanelMaximized] = useState(false);
+  
+  // ✅ NEW: Split view states for horizontal divider (description vs editor)
+  const [leftWidth, setLeftWidth] = useState(40);
+  const [isDraggingHorizontal, setIsDraggingHorizontal] = useState(false);
   
   const outputRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<any>(null);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [leftWidth, setLeftWidth] = useState(40);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const verticalDragRef = useRef<HTMLDivElement>(null);
+  const horizontalDragRef = useRef<HTMLDivElement>(null);
 
   // Configure Monaco
   useEffect(() => {
@@ -113,31 +122,94 @@ export const ProblemDetail: React.FC = () => {
     }
   }, [code, slug]);
 
-  // Drag functionality for resizing panels
+  // ✅ Vertical Drag Handler (Editor vs Bottom Panel)
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-      const containerWidth = window.innerWidth;
-      const newLeftWidth = (e.clientX / containerWidth) * 100;
-      if (newLeftWidth > 15 && newLeftWidth < 60) {
-        setLeftWidth(newLeftWidth);
-      }
+      if (!isDragging || !containerRef.current) return;
+      
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const containerHeight = containerRect.height;
+      const mouseY = e.clientY - containerRect.top;
+      
+      // Calculate percentage (20% to 80% range)
+      let percentage = (mouseY / containerHeight) * 100;
+      percentage = Math.max(20, Math.min(80, percentage));
+      
+      setSplitPosition(percentage);
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'none';
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging || !containerRef.current) return;
+      
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const containerHeight = containerRect.height;
+      const touchY = e.touches[0].clientY - containerRect.top;
+      
+      let percentage = (touchY / containerHeight) * 100;
+      percentage = Math.max(20, Math.min(80, percentage));
+      
+      setSplitPosition(percentage);
     };
 
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleMouseUp);
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleMouseUp);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
     };
   }, [isDragging]);
+
+  // ✅ Horizontal Drag Handler (Description vs Editor)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingHorizontal || !containerRef.current) return;
+      
+      const containerWidth = containerRef.current.clientWidth;
+      const mouseX = e.clientX - containerRef.current.getBoundingClientRect().left;
+      
+      let percentage = (mouseX / containerWidth) * 100;
+      percentage = Math.max(15, Math.min(60, percentage));
+      
+      setLeftWidth(percentage);
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingHorizontal(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'none';
+    };
+
+    if (isDraggingHorizontal) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+  }, [isDraggingHorizontal]);
 
   const fetchProblem = async () => {
     setLoading(true);
@@ -318,6 +390,19 @@ var sumOfTwoNumbers = function(a, b) {
 
   const toggleEditorMaximize = () => {
     setIsEditorMaximized(!isEditorMaximized);
+    setIsBottomPanelMaximized(false);
+  };
+
+  const toggleBottomPanelMaximize = () => {
+    setIsBottomPanelMaximized(!isBottomPanelMaximized);
+    setIsEditorMaximized(false);
+  };
+
+  const resetLayout = () => {
+    setIsEditorMaximized(false);
+    setIsBottomPanelMaximized(false);
+    setSplitPosition(60);
+    setLeftWidth(40);
   };
 
   const getDifficultyBadge = (difficulty: string) => {
@@ -379,6 +464,10 @@ var sumOfTwoNumbers = function(a, b) {
 
   const difficultyInfo = getDifficultyBadge(problem?.difficulty || 'easy');
 
+  // Calculate panel heights
+  const editorHeight = isEditorMaximized ? 100 : isBottomPanelMaximized ? 0 : splitPosition;
+  const bottomHeight = isBottomPanelMaximized ? 100 : isEditorMaximized ? 0 : 100 - splitPosition;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-screen bg-[#0D0F0F]">
@@ -418,6 +507,36 @@ var sumOfTwoNumbers = function(a, b) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Layout Controls */}
+          <div className="flex items-center gap-1 mr-2">
+            <button
+              onClick={toggleEditorMaximize}
+              className={`p-1.5 rounded-lg transition-colors ${
+                isEditorMaximized ? 'bg-[#10B981]/20 text-[#10B981]' : 'text-[#5C6360] hover:text-[#EDEFEE] hover:bg-[#1E2322]'
+              }`}
+              title="Maximize Editor"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={toggleBottomPanelMaximize}
+              className={`p-1.5 rounded-lg transition-colors ${
+                isBottomPanelMaximized ? 'bg-[#10B981]/20 text-[#10B981]' : 'text-[#5C6360] hover:text-[#EDEFEE] hover:bg-[#1E2322]'
+              }`}
+              title="Maximize Test Cases"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </button>
+            {(isEditorMaximized || isBottomPanelMaximized) && (
+              <button
+                onClick={resetLayout}
+                className="p-1.5 text-[#5C6360] hover:text-[#EDEFEE] hover:bg-[#1E2322] rounded-lg transition-colors"
+                title="Reset Layout"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
           <Button variant="secondary" size="sm" onClick={handleRunCode} disabled={isRunning} className="gap-1 text-xs h-8">
             {isRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
             {isRunning ? 'Running...' : 'Run'}
@@ -429,9 +548,9 @@ var sumOfTwoNumbers = function(a, b) {
         </div>
       </div>
 
-      {/* ✅ MAIN CONTENT - FULL SCREEN SPLIT VIEW */}
-      <div className="flex-1 flex min-h-0">
-        {/* LEFT PANEL - Problem Description with Resizable Handle */}
+      {/* ✅ MAIN CONTENT - With Draggable Dividers */}
+      <div ref={containerRef} className="flex-1 flex min-h-0">
+        {/* LEFT PANEL - Problem Description */}
         <div 
           className="flex flex-col bg-[#0D0F0F] min-h-0 overflow-hidden"
           style={{ width: `${leftWidth}%` }}
@@ -544,89 +663,122 @@ var sumOfTwoNumbers = function(a, b) {
           </div>
         </div>
 
-        {/* ✅ DRAG HANDLE */}
+        {/* ✅ HORIZONTAL DRAG HANDLE (Description vs Editor) */}
         <div 
           className="w-1 flex-shrink-0 bg-[#2A302E] hover:bg-[#10B981] cursor-col-resize transition-colors duration-150 relative group"
-          onMouseDown={() => setIsDragging(true)}
+          onMouseDown={() => setIsDraggingHorizontal(true)}
+          onTouchStart={() => setIsDraggingHorizontal(true)}
         >
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-0.5 h-12 bg-[#5C6360] group-hover:bg-[#10B981] rounded-full transition-colors" />
           </div>
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="w-4 h-4 text-[#10B981]" />
+          </div>
         </div>
 
-        {/* RIGHT PANEL - Code Editor + Output */}
+        {/* RIGHT PANEL - Editor + Test Cases */}
         <div 
-          className="flex flex-col bg-[#0D0F0F] min-h-0"
-          style={{ width: `${100 - leftWidth}%` }}
+          className="flex-1 flex flex-col bg-[#0D0F0F] min-h-0"
+          style={{ width: `${100 - leftWidth - 0.5}%` }}
         >
-          {/* Editor Header */}
-          <div className="bg-[#1A1D1E] border-b border-[#2A302E] px-4 py-2 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setShowDescription(true)} className={`text-[#5C6360] hover:text-[#EDEFEE] transition-colors ${showDescription ? 'hidden' : ''}`}>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <span className="text-sm text-[#9CA3A0]">JavaScript</span>
-              <span className="text-xs text-[#5C6360]">• {problem.timeLimit || 2000}ms • {problem.memoryLimit || 256}MB</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={handleCopyCode} className="text-[#5C6360] hover:text-[#EDEFEE] p-1 rounded hover:bg-[#1E2322] transition-colors" title="Copy code">
-                {copied ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3" />}
-              </button>
-              <button onClick={toggleEditorMaximize} className="text-[#5C6360] hover:text-[#EDEFEE] p-1 rounded hover:bg-[#1E2322] transition-colors" title="Toggle maximize">
-                {isEditorMaximized ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-              </button>
-              <button onClick={() => setShowSettings(!showSettings)} className="text-[#5C6360] hover:text-[#EDEFEE] p-1 rounded hover:bg-[#1E2322] transition-colors" title="Settings">
-                <Settings className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Settings Dropdown */}
-          {showSettings && (
-            <div className="bg-[#1A1D1E] border-b border-[#2A302E] p-3 flex items-center gap-3 flex-shrink-0">
-              <span className="text-xs text-[#5C6360]">Font Size:</span>
-              {[12, 14, 16, 18, 20, 22, 24].map((size) => (
-                <button
-                  key={size}
-                  onClick={() => handleFontSizeChange(size)}
-                  className={`text-xs px-2 py-1 rounded ${fontSize === size ? 'bg-[#10B981] text-white' : 'text-[#9CA3A0] hover:text-[#EDEFEE]'}`}
-                >
-                  {size}
+          {/* EDITOR SECTION */}
+          <div 
+            className="flex flex-col bg-[#0D0F0F] min-h-0"
+            style={{ 
+              height: `${editorHeight}%`,
+              display: editorHeight === 0 ? 'none' : 'flex',
+            }}
+          >
+            {/* Editor Header */}
+            <div className="bg-[#1A1D1E] border-b border-[#2A302E] px-4 py-2 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setShowDescription(true)} className={`text-[#5C6360] hover:text-[#EDEFEE] transition-colors ${showDescription ? 'hidden' : ''}`}>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
-              ))}
+                <span className="text-sm text-[#9CA3A0]">JavaScript</span>
+                <span className="text-xs text-[#5C6360]">• {problem.timeLimit || 2000}ms • {problem.memoryLimit || 256}MB</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={handleCopyCode} className="text-[#5C6360] hover:text-[#EDEFEE] p-1 rounded hover:bg-[#1E2322] transition-colors" title="Copy code">
+                  {copied ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3" />}
+                </button>
+                <button onClick={() => setShowSettings(!showSettings)} className="text-[#5C6360] hover:text-[#EDEFEE] p-1 rounded hover:bg-[#1E2322] transition-colors" title="Settings">
+                  <Settings className="w-3 h-3" />
+                </button>
+              </div>
             </div>
-          )}
 
-          {/* Code Editor */}
-          <div className="flex-1 min-h-0 bg-[#1E1E1E]">
-            <Editor
-              height="100%"
-              defaultLanguage="javascript"
-              language="javascript"
-              value={code}
-              onChange={(value) => setCode(value || '')}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: false },
-                fontSize: fontSize,
-                lineNumbers: 'on',
-                automaticLayout: true,
-                tabSize: 2,
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                suggestOnTriggerCharacters: true,
-                quickSuggestions: true,
-                acceptSuggestionOnCommitCharacter: true,
-                acceptSuggestionOnEnter: 'on',
-                renderWhitespace: 'selection',
-              }}
-            />
+            {/* Settings Dropdown */}
+            {showSettings && (
+              <div className="bg-[#1A1D1E] border-b border-[#2A302E] p-3 flex items-center gap-3 flex-shrink-0">
+                <span className="text-xs text-[#5C6360]">Font Size:</span>
+                {[12, 14, 16, 18, 20, 22, 24].map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => handleFontSizeChange(size)}
+                    className={`text-xs px-2 py-1 rounded ${fontSize === size ? 'bg-[#10B981] text-white' : 'text-[#9CA3A0] hover:text-[#EDEFEE]'}`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Code Editor */}
+            <div className="flex-1 min-h-0 bg-[#1E1E1E]">
+              <Editor
+                height="100%"
+                defaultLanguage="javascript"
+                language="javascript"
+                value={code}
+                onChange={(value) => setCode(value || '')}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: fontSize,
+                  lineNumbers: 'on',
+                  automaticLayout: true,
+                  tabSize: 2,
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  suggestOnTriggerCharacters: true,
+                  quickSuggestions: true,
+                  acceptSuggestionOnCommitCharacter: true,
+                  acceptSuggestionOnEnter: 'on',
+                  renderWhitespace: 'selection',
+                }}
+              />
+            </div>
+
+            {/* ✅ VERTICAL DRAG HANDLE (Editor vs Test Cases) - Only show when both visible */}
+            {!isEditorMaximized && !isBottomPanelMaximized && (
+              <div 
+                ref={verticalDragRef}
+                className="flex-shrink-0 h-1 bg-[#2A302E] hover:bg-[#10B981] cursor-row-resize transition-colors duration-150 relative group"
+                onMouseDown={() => setIsDragging(true)}
+                onTouchStart={() => setIsDragging(true)}
+              >
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="h-0.5 w-12 bg-[#5C6360] group-hover:bg-[#10B981] rounded-full transition-colors" />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <GripHorizontal className="w-4 h-4 text-[#10B981]" />
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Bottom Section - Test Cases & Output */}
-          <div className="border-t border-[#2A302E] bg-[#1A1D1E] flex-shrink-0" style={{ height: isEditorMaximized ? '0px' : '45%' }}>
+          {/* BOTTOM PANEL - Test Cases & Output */}
+          <div 
+            className="flex flex-col bg-[#1A1D1E] border-t border-[#2A302E] min-h-0"
+            style={{ 
+              height: `${bottomHeight}%`,
+              display: bottomHeight === 0 ? 'none' : 'flex',
+            }}
+          >
             {/* Tabs */}
-            <div className="flex border-b border-[#2A302E] bg-[#0D0F0F]">
+            <div className="flex border-b border-[#2A302E] bg-[#0D0F0F] flex-shrink-0">
               <button
                 onClick={() => setActiveTab('description')}
                 className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 ${
@@ -659,7 +811,7 @@ var sumOfTwoNumbers = function(a, b) {
             </div>
 
             {/* Tab Content */}
-            <div className="h-[calc(100%-32px)] overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4 min-h-0">
               {activeTab === 'description' ? (
                 <TestCaseConsole
                   visibleTestCases={visibleTestCases}

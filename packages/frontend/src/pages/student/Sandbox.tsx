@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Loader2, Terminal, ChevronDown, X, Copy, Check, Maximize2, Minimize2 } from 'lucide-react';
+import { Play, Loader2, Terminal, ChevronDown, X, Copy, Check, Maximize2, Minimize2, GripVertical } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { setupMonaco } from '../../lib/monaco-config';
@@ -39,42 +39,73 @@ export const Sandbox: React.FC = () => {
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editorError, setEditorError] = useState(false);
-  const [isOutputMaximized, setIsOutputMaximized] = useState(false);
-  const [editorHeight, setEditorHeight] = useState(65); // Percentage
+  
+  // NEW: Split view state
+  const [splitPosition, setSplitPosition] = useState(60); // Editor takes 60% width
   const [isDragging, setIsDragging] = useState(false);
+  const [isEditorMaximized, setIsEditorMaximized] = useState(false);
+  const [isOutputMaximized, setIsOutputMaximized] = useState(false);
   
   const outputRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchLanguages();
   }, []);
 
-  // Drag functionality for resizing
+  // ✅ Drag functionality for resizing panels horizontally
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging || !containerRef.current) return;
-      const containerHeight = containerRef.current.clientHeight;
-      const mouseY = e.clientY - containerRef.current.getBoundingClientRect().top;
-      const percentage = (mouseY / containerHeight) * 100;
-      if (percentage > 20 && percentage < 85) {
-        setEditorHeight(percentage);
-      }
+      
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const containerWidth = containerRect.width;
+      const mouseX = e.clientX - containerRect.left;
+      
+      // Calculate percentage (10% to 85% range)
+      let percentage = (mouseX / containerWidth) * 100;
+      percentage = Math.max(15, Math.min(85, percentage));
+      
+      setSplitPosition(percentage);
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'none';
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging || !containerRef.current) return;
+      
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const containerWidth = containerRect.width;
+      const touchX = e.touches[0].clientX - containerRect.left;
+      
+      let percentage = (touchX / containerWidth) * 100;
+      percentage = Math.max(15, Math.min(85, percentage));
+      
+      setSplitPosition(percentage);
     };
 
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleMouseUp);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
     };
   }, [isDragging]);
 
@@ -167,13 +198,20 @@ export const Sandbox: React.FC = () => {
     console.warn('Monaco Editor failed to load, using fallback editor');
   };
 
+  const toggleEditorMaximize = () => {
+    setIsEditorMaximized(!isEditorMaximized);
+    setIsOutputMaximized(false);
+  };
+
   const toggleOutputMaximize = () => {
     setIsOutputMaximized(!isOutputMaximized);
-    if (!isOutputMaximized) {
-      setEditorHeight(40);
-    } else {
-      setEditorHeight(65);
-    }
+    setIsEditorMaximized(false);
+  };
+
+  const resetLayout = () => {
+    setIsEditorMaximized(false);
+    setIsOutputMaximized(false);
+    setSplitPosition(60);
   };
 
   const getLanguageColor = (languageId: string) => {
@@ -196,6 +234,10 @@ export const Sandbox: React.FC = () => {
 
   const currentLanguage = languages.find(l => l.id === selectedLanguage);
 
+  // Calculate panel widths
+  const editorWidth = isEditorMaximized ? 100 : isOutputMaximized ? 0 : splitPosition;
+  const outputWidth = isOutputMaximized ? 100 : isEditorMaximized ? 0 : 100 - splitPosition;
+
   return (
     <div className="h-full w-full bg-[#0D0F0F] overflow-hidden">
       <div className="h-full w-full flex flex-col px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1600px] mx-auto">
@@ -208,7 +250,7 @@ export const Sandbox: React.FC = () => {
             </h1>
             <p className="text-[#9CA3A0] mt-1">Write, test, and run code in multiple languages</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
@@ -255,21 +297,54 @@ export const Sandbox: React.FC = () => {
                 </>
               )}
             </Button>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={toggleEditorMaximize}
+                className={`p-2 rounded-lg transition-colors ${
+                  isEditorMaximized ? 'bg-[#10B981]/20 text-[#10B981]' : 'text-[#5C6360] hover:text-[#EDEFEE] hover:bg-[#1E2322]'
+                }`}
+                title="Maximize Editor"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={toggleOutputMaximize}
+                className={`p-2 rounded-lg transition-colors ${
+                  isOutputMaximized ? 'bg-[#10B981]/20 text-[#10B981]' : 'text-[#5C6360] hover:text-[#EDEFEE] hover:bg-[#1E2322]'
+                }`}
+                title="Maximize Output"
+              >
+                <Minimize2 className="w-4 h-4" />
+              </button>
+              {(isEditorMaximized || isOutputMaximized) && (
+                <button
+                  onClick={resetLayout}
+                  className="p-2 text-[#5C6360] hover:text-[#EDEFEE] hover:bg-[#1E2322] rounded-lg transition-colors"
+                  title="Reset Layout"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Main Content - Full Height */}
-        <div ref={containerRef} className="flex-1 flex flex-col min-h-0 gap-4">
-          {/* Editor and Output Container */}
-          <div className="flex-1 flex flex-col min-h-0 bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
-            
-            {/* Editor Section */}
-            <div 
-              className="relative flex-shrink-0 transition-all duration-200"
-              style={{ height: `${isOutputMaximized ? 0 : editorHeight}%` }}
+        {/* Main Content - Side by Side Layout */}
+        <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex min-h-0 gap-0 relative">
+            {/* Left Panel - Code Editor */}
+            <div
+              className="flex flex-col bg-[#161A19] border border-[#2A302E] rounded-l-xl overflow-hidden shadow-sm"
+              style={{ 
+                width: `${editorWidth}%`,
+                display: editorWidth === 0 ? 'none' : 'flex',
+                borderTopRightRadius: editorWidth === 0 || outputWidth === 0 ? '0.75rem' : '0',
+                borderBottomRightRadius: editorWidth === 0 || outputWidth === 0 ? '0.75rem' : '0',
+              }}
             >
               {/* Editor Toolbar */}
-              <div className="px-4 py-2 border-b border-[#2A302E] flex items-center justify-between bg-[#1A1D1E]">
+              <div className="px-4 py-2 border-b border-[#2A302E] flex items-center justify-between bg-[#1A1D1E] flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${getLanguageColor(selectedLanguage)}`} />
                   <span className="text-sm font-medium text-[#EDEFEE]">
@@ -283,7 +358,7 @@ export const Sandbox: React.FC = () => {
               </div>
 
               {/* Monaco Editor */}
-              <div className="h-[calc(100%-40px)]">
+              <div className="flex-1 min-h-0">
                 {!editorError ? (
                   <React.Suspense 
                     fallback={
@@ -308,7 +383,6 @@ export const Sandbox: React.FC = () => {
                         suggestOnTriggerCharacters: true,
                         quickSuggestions: true,
                       }}
-                      onError={handleEditorError}
                     />
                   </React.Suspense>
                 ) : (
@@ -321,27 +395,37 @@ export const Sandbox: React.FC = () => {
                   />
                 )}
               </div>
-
-              {/* Resize Handle */}
-              {!isOutputMaximized && (
-                <div 
-                  className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#2A302E] hover:bg-[#10B981] cursor-row-resize transition-colors group flex items-center justify-center z-10"
-                  onMouseDown={() => setIsDragging(true)}
-                >
-                  <div className="w-12 h-1 bg-[#5C6360] group-hover:bg-[#10B981] rounded-full transition-colors" />
-                </div>
-              )}
             </div>
 
-            {/* Output Section */}
-            <div 
-              className={`flex-1 min-h-0 bg-[#1A1D1E] transition-all duration-200 ${
-                isOutputMaximized ? 'h-full' : ''
-              }`}
-              style={{ height: isOutputMaximized ? '100%' : `${100 - editorHeight}%` }}
+            {/* ✅ Drag Handle - Vertical Divider */}
+            {!isEditorMaximized && !isOutputMaximized && (
+              <div
+                ref={dragRef}
+                className="flex-shrink-0 w-1 bg-[#2A302E] hover:bg-[#10B981] cursor-col-resize transition-colors duration-150 relative group z-10"
+                onMouseDown={() => setIsDragging(true)}
+                onTouchStart={() => setIsDragging(true)}
+              >
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-0.5 h-12 bg-[#5C6360] group-hover:bg-[#10B981] rounded-full transition-colors" />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <GripVertical className="w-4 h-4 text-[#10B981]" />
+                </div>
+              </div>
+            )}
+
+            {/* Right Panel - Output */}
+            <div
+              className="flex flex-col bg-[#161A19] border border-[#2A302E] rounded-r-xl overflow-hidden shadow-sm"
+              style={{ 
+                width: `${outputWidth}%`,
+                display: outputWidth === 0 ? 'none' : 'flex',
+                borderTopLeftRadius: outputWidth === 0 || editorWidth === 0 ? '0.75rem' : '0',
+                borderBottomLeftRadius: outputWidth === 0 || editorWidth === 0 ? '0.75rem' : '0',
+              }}
             >
               {/* Output Header */}
-              <div className="px-4 py-2 border-b border-[#2A302E] flex items-center justify-between bg-[#0D0F0F] flex-shrink-0">
+              <div className="px-4 py-2 border-b border-[#2A302E] flex items-center justify-between bg-[#1A1D1E] flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Terminal className="w-4 h-4 text-[#9CA3A0]" />
                   <span className="text-sm font-medium text-[#EDEFEE]">Output</span>
@@ -356,6 +440,16 @@ export const Sandbox: React.FC = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Stdin Input */}
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={stdin}
+                      onChange={(e) => setStdin(e.target.value)}
+                      placeholder="stdin"
+                      className="w-24 px-2 py-1 text-xs bg-[#0D0F0F] border border-[#2A302E] rounded text-[#EDEFEE] placeholder-[#5C6360] focus:outline-none focus:ring-1 focus:ring-[#10B981]"
+                    />
+                  </div>
                   {result && (
                     <>
                       <button
@@ -374,18 +468,11 @@ export const Sandbox: React.FC = () => {
                       </button>
                     </>
                   )}
-                  <button
-                    onClick={toggleOutputMaximize}
-                    className="p-1 text-[#9CA3A0] hover:text-[#EDEFEE] transition-colors"
-                    title={isOutputMaximized ? 'Minimize output' : 'Maximize output'}
-                  >
-                    {isOutputMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                  </button>
                 </div>
               </div>
 
               {/* Output Content */}
-              <div ref={outputRef} className="p-4 h-[calc(100%-44px)] overflow-y-auto font-mono text-sm bg-[#0D0F0F]">
+              <div ref={outputRef} className="flex-1 p-4 overflow-y-auto font-mono text-sm bg-[#0D0F0F] min-h-0">
                 {!result && (
                   <p className="text-[#5C6360] italic">Run your code to see output here...</p>
                 )}
@@ -443,9 +530,9 @@ export const Sandbox: React.FC = () => {
           </div>
 
           {/* Keyboard Shortcut Hint */}
-          <div className="text-xs text-[#5C6360] text-center flex-shrink-0">
+          <div className="text-xs text-[#5C6360] text-center flex-shrink-0 mt-2">
             <kbd className="px-2.5 py-1 bg-[#161A19] border border-[#2A302E] rounded text-xs">⌘ + Enter</kbd>
-            {' '}to run code • Multiple languages supported • 5 executions per minute
+            {' '}to run code • <kbd className="px-2.5 py-1 bg-[#161A19] border border-[#2A302E] rounded text-xs">Drag</kbd> the divider to resize panels
           </div>
         </div>
       </div>
