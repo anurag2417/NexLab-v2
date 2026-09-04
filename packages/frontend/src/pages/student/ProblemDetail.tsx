@@ -4,11 +4,18 @@ import {
   ArrowLeft, Play, Loader2, Zap, Copy, Check, 
   Lightbulb, ChevronDown, ChevronUp, CheckCircle, 
   XCircle, Clock, AlertCircle, Terminal,
-  ChevronRight, ChevronLeft, Settings
+  ChevronRight, ChevronLeft, Settings, Maximize2, Minimize2,
+  GripVertical
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import Editor from '@monaco-editor/react';
+
+// Import all the new components
+import { StatusBar } from '../../components/StatusBar';
+import { TestCaseConsole } from '../../components/TestCaseConsole';
+import { SubmissionHistory } from '../../components/SubmissionHistory';
+import { CodeHistory } from '../../components/CodeHistory';
 
 interface Problem {
   _id: string;
@@ -61,10 +68,14 @@ export const ProblemDetail: React.FC = () => {
   const [selectedTestCase, setSelectedTestCase] = useState<number>(0);
   const [fontSize, setFontSize] = useState(14);
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState<'description' | 'submissions'>('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'submissions' | 'history'>('description');
   const [submissions, setSubmissions] = useState<any[]>([]);
+  const [codeHistory, setCodeHistory] = useState<string[]>([]);
+  const [isEditorMaximized, setIsEditorMaximized] = useState(false);
+  const [editorHeight, setEditorHeight] = useState(65); // Percentage
   
   const outputRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<any>(null);
 
   // Configure Monaco
   useEffect(() => {
@@ -83,8 +94,21 @@ export const ProblemDetail: React.FC = () => {
     if (slug) {
       fetchProblem();
       fetchSubmissions();
+      loadCodeHistory();
     }
   }, [slug]);
+
+  // ✅ Auto-save code to localStorage
+  useEffect(() => {
+    if (code && slug) {
+      const timer = setTimeout(() => {
+        localStorage.setItem(`code_${slug}`, code);
+        // Also save to history
+        saveCodeHistory(code);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [code, slug]);
 
   const fetchProblem = async () => {
     setLoading(true);
@@ -93,7 +117,12 @@ export const ProblemDetail: React.FC = () => {
       const data = response.data.data;
       setProblem(data.problem);
       
-      let starterCode = `/**
+      // Load saved code from localStorage
+      const savedCode = localStorage.getItem(`code_${slug}`);
+      if (savedCode) {
+        setCode(savedCode);
+      } else {
+        let starterCode = `/**
  * @param {number} a
  * @param {number} b
  * @return {number}
@@ -102,12 +131,12 @@ var sumOfTwoNumbers = function(a, b) {
     // Write your solution here
     return 0;
 };`;
-      
-      if (data.problem.starterCode) {
-        starterCode = data.problem.starterCode;
+        
+        if (data.problem.starterCode) {
+          starterCode = data.problem.starterCode;
+        }
+        setCode(starterCode);
       }
-      
-      setCode(starterCode);
     } catch (error) {
       console.error('Error fetching problem:', error);
       navigate('/problems');
@@ -125,6 +154,31 @@ var sumOfTwoNumbers = function(a, b) {
         setSubmissions([]);
       }
     }
+  };
+
+  const loadCodeHistory = () => {
+    const history = localStorage.getItem(`code_history_${slug}`);
+    if (history) {
+      try {
+        setCodeHistory(JSON.parse(history));
+      } catch (e) {
+        setCodeHistory([]);
+      }
+    }
+  };
+
+  const saveCodeHistory = (newCode: string) => {
+    // Only save if code is different from last saved
+    const lastCode = codeHistory[codeHistory.length - 1];
+    if (lastCode === newCode) return;
+    
+    const updatedHistory = [...codeHistory, newCode];
+    // Keep only last 20 versions
+    if (updatedHistory.length > 20) {
+      updatedHistory.shift();
+    }
+    setCodeHistory(updatedHistory);
+    localStorage.setItem(`code_history_${slug}`, JSON.stringify(updatedHistory));
   };
 
   const handleRunCode = async () => {
@@ -236,13 +290,17 @@ var sumOfTwoNumbers = function(a, b) {
     setShowSettings(false);
   };
 
+  const toggleEditorMaximize = () => {
+    setIsEditorMaximized(!isEditorMaximized);
+  };
+
   const getDifficultyBadge = (difficulty: string) => {
-    const colors: Record<string, string> = {
-      easy: 'text-[#10B981]',
-      medium: 'text-[#FBBF24]',
-      hard: 'text-[#F87171]',
+    const colors: Record<string, { text: string; bg: string; label: string }> = {
+      easy: { text: 'text-[#10B981]', bg: 'bg-[#10B981]/10', label: '🟢 Easy' },
+      medium: { text: 'text-[#FBBF24]', bg: 'bg-[#FBBF24]/10', label: '🟡 Medium' },
+      hard: { text: 'text-[#F87171]', bg: 'bg-[#F87171]/10', label: '🔴 Hard' },
     };
-    return colors[difficulty] || 'text-[#5C6360]';
+    return colors[difficulty] || colors.easy;
   };
 
   const getStatusIcon = (status: string) => {
@@ -312,8 +370,11 @@ var sumOfTwoNumbers = function(a, b) {
     );
   }
 
+  const difficultyInfo = getDifficultyBadge(problem.difficulty);
+
   return (
     <div className="h-screen flex flex-col bg-[#0D0F0F] overflow-hidden">
+      {/* Top Navigation Bar */}
       <div className="bg-[#1A1D1E] border-b border-[#2A302E] px-4 py-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/problems')} className="text-[#9CA3A0] hover:text-[#EDEFEE] transition-colors">
@@ -322,8 +383,8 @@ var sumOfTwoNumbers = function(a, b) {
           <div>
             <h1 className="text-base font-bold text-[#EDEFEE]">{problem.title}</h1>
             <div className="flex items-center gap-2 text-xs">
-              <span className={getDifficultyBadge(problem.difficulty)}>
-                {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
+              <span className={`${difficultyInfo.text} font-medium`}>
+                {difficultyInfo.label}
               </span>
               <span className="text-[#5C6360]">•</span>
               <span className="text-[#5C6360]">{problem.tags?.join(', ') || 'General'}</span>
@@ -342,16 +403,12 @@ var sumOfTwoNumbers = function(a, b) {
         </div>
       </div>
 
+      {/* ✅ MAIN CONTENT - SPLIT VIEW LAYOUT */}
       <div className="flex-1 flex min-h-0">
-        <div className={`${showDescription ? 'w-1/2' : 'w-0'} flex flex-col bg-[#0D0F0F] border-r border-[#2A302E] transition-all duration-300 overflow-hidden min-h-0`}>
+        {/* LEFT PANEL - Problem Description */}
+        <div className={`${showDescription ? 'w-2/5' : 'w-0'} flex flex-col bg-[#0D0F0F] border-r border-[#2A302E] transition-all duration-300 overflow-hidden min-h-0`}>
           <div className="bg-[#1A1D1E] border-b border-[#2A302E] px-4 py-2 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-[#EDEFEE]">Description</span>
-              <button onClick={() => setShowHints(!showHints)} className="text-xs text-[#5C6360] hover:text-[#EDEFEE] transition-colors flex items-center gap-1">
-                <Lightbulb className="w-3 h-3" />
-                Hints
-              </button>
-            </div>
+            <span className="text-sm font-medium text-[#EDEFEE]">Description</span>
             <button onClick={() => setShowDescription(false)} className="text-[#5C6360] hover:text-[#EDEFEE] transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -359,17 +416,29 @@ var sumOfTwoNumbers = function(a, b) {
 
           <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
-              <div className="flex items-center gap-4 text-xs text-[#5C6360] pb-4 border-b border-[#2A302E]">
-                <span>Acceptance Rate: <span className="text-[#EDEFEE]">{(problem.acceptanceRate || 45.6)}%</span></span>
-                <span>•</span>
-                <span>Submissions: <span className="text-[#EDEFEE]">{problem.totalSubmissions || 1284}</span></span>
+              {/* ✅ Problem Statistics */}
+              <div className="flex items-center gap-6 text-sm text-[#5C6360] pb-4 border-b border-[#2A302E]">
+                <div>
+                  <span className="font-medium text-[#EDEFEE]">{problem.acceptanceRate || 45.6}%</span>
+                  <span className="ml-1">Acceptance</span>
+                </div>
+                <div>
+                  <span className="font-medium text-[#EDEFEE]">{problem.totalSubmissions || 1284}</span>
+                  <span className="ml-1">Submissions</span>
+                </div>
+                <div>
+                  <span className={`font-medium ${difficultyInfo.text}`}>{problem.difficulty}</span>
+                  <span className="ml-1">Difficulty</span>
+                </div>
               </div>
 
+              {/* Problem Description */}
               <div>
                 <h2 className="text-sm font-semibold text-[#5C6360] uppercase tracking-wider mb-3">Problem</h2>
                 <div className="text-[#9CA3A0] whitespace-pre-wrap leading-relaxed text-sm">{problem.description}</div>
               </div>
 
+              {/* Examples */}
               {problem.examples && problem.examples.length > 0 && (
                 <div>
                   <h2 className="text-sm font-semibold text-[#5C6360] uppercase tracking-wider mb-3">Examples</h2>
@@ -394,6 +463,7 @@ var sumOfTwoNumbers = function(a, b) {
                 </div>
               )}
 
+              {/* Constraints */}
               {problem.constraints && problem.constraints.length > 0 && (
                 <div>
                   <h2 className="text-sm font-semibold text-[#5C6360] uppercase tracking-wider mb-3">Constraints</h2>
@@ -405,23 +475,49 @@ var sumOfTwoNumbers = function(a, b) {
                 </div>
               )}
 
-              {showHints && problem.hints && problem.hints.length > 0 && (
+              {/* ✅ Related Topics/Tags */}
+              {problem.tags && problem.tags.length > 0 && (
                 <div>
-                  <h2 className="text-sm font-semibold text-[#5C6360] uppercase tracking-wider mb-3">Hints</h2>
-                  <div className="space-y-2">
-                    {problem.hints.map((hint, index) => (
-                      <div key={index} className="bg-[#10B981]/5 border border-[#10B981]/20 rounded-lg p-3 text-sm text-[#9CA3A0]">
-                        💡 {hint}
-                      </div>
+                  <h2 className="text-sm font-semibold text-[#5C6360] uppercase tracking-wider mb-3">Related Topics</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {problem.tags.map((tag) => (
+                      <span key={tag} className="px-2 py-1 rounded-full bg-[#2A302E] text-[#9CA3A0] text-xs hover:bg-[#10B981]/20 hover:text-[#10B981] cursor-pointer transition-colors">
+                        {tag}
+                      </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Hints */}
+              {problem.hints && problem.hints.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowHints(!showHints)}
+                    className="flex items-center gap-2 text-sm font-medium text-[#9CA3A0] hover:text-[#EDEFEE] transition-colors"
+                  >
+                    <Lightbulb className="w-4 h-4" />
+                    Hints
+                    {showHints ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                  {showHints && (
+                    <div className="mt-3 space-y-2">
+                      {problem.hints.map((hint, index) => (
+                        <div key={index} className="bg-[#10B981]/5 border border-[#10B981]/20 rounded-lg p-3 text-sm text-[#9CA3A0]">
+                          💡 {hint}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <div className={`${showDescription ? 'w-1/2' : 'w-full'} flex flex-col bg-[#0D0F0F] min-h-0`}>
+        {/* RIGHT PANEL - Code Editor + Output */}
+        <div className={`${showDescription ? 'w-3/5' : 'w-full'} flex flex-col bg-[#0D0F0F] min-h-0`}>
+          {/* Editor Header */}
           <div className="bg-[#1A1D1E] border-b border-[#2A302E] px-4 py-2 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <button onClick={() => setShowDescription(true)} className={`text-[#5C6360] hover:text-[#EDEFEE] transition-colors ${showDescription ? 'hidden' : ''}`}>
@@ -434,23 +530,32 @@ var sumOfTwoNumbers = function(a, b) {
               <button onClick={handleCopyCode} className="text-[#5C6360] hover:text-[#EDEFEE] p-1 rounded hover:bg-[#1E2322] transition-colors" title="Copy code">
                 {copied ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3" />}
               </button>
+              <button onClick={toggleEditorMaximize} className="text-[#5C6360] hover:text-[#EDEFEE] p-1 rounded hover:bg-[#1E2322] transition-colors" title="Toggle maximize">
+                {isEditorMaximized ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+              </button>
               <button onClick={() => setShowSettings(!showSettings)} className="text-[#5C6360] hover:text-[#EDEFEE] p-1 rounded hover:bg-[#1E2322] transition-colors" title="Settings">
                 <Settings className="w-3 h-3" />
               </button>
             </div>
           </div>
 
+          {/* Settings Dropdown */}
           {showSettings && (
             <div className="bg-[#1A1D1E] border-b border-[#2A302E] p-3 flex items-center gap-3 flex-shrink-0">
               <span className="text-xs text-[#5C6360]">Font Size:</span>
-              <button onClick={() => handleFontSizeChange(12)} className={`text-xs px-2 py-1 rounded ${fontSize === 12 ? 'bg-[#10B981] text-white' : 'text-[#9CA3A0] hover:text-[#EDEFEE]'}`}>12</button>
-              <button onClick={() => handleFontSizeChange(14)} className={`text-xs px-2 py-1 rounded ${fontSize === 14 ? 'bg-[#10B981] text-white' : 'text-[#9CA3A0] hover:text-[#EDEFEE]'}`}>14</button>
-              <button onClick={() => handleFontSizeChange(16)} className={`text-xs px-2 py-1 rounded ${fontSize === 16 ? 'bg-[#10B981] text-white' : 'text-[#9CA3A0] hover:text-[#EDEFEE]'}`}>16</button>
-              <button onClick={() => handleFontSizeChange(18)} className={`text-xs px-2 py-1 rounded ${fontSize === 18 ? 'bg-[#10B981] text-white' : 'text-[#9CA3A0] hover:text-[#EDEFEE]'}`}>18</button>
-              <button onClick={() => handleFontSizeChange(20)} className={`text-xs px-2 py-1 rounded ${fontSize === 20 ? 'bg-[#10B981] text-white' : 'text-[#9CA3A0] hover:text-[#EDEFEE]'}`}>20</button>
+              {[12, 14, 16, 18, 20, 22, 24].map((size) => (
+                <button
+                  key={size}
+                  onClick={() => handleFontSizeChange(size)}
+                  className={`text-xs px-2 py-1 rounded ${fontSize === size ? 'bg-[#10B981] text-white' : 'text-[#9CA3A0] hover:text-[#EDEFEE]'}`}
+                >
+                  {size}
+                </button>
+              ))}
             </div>
           )}
 
+          {/* ✅ Code Editor */}
           <div className="flex-1 min-h-0 bg-[#1E1E1E]">
             <Editor
               height="100%"
@@ -476,67 +581,66 @@ var sumOfTwoNumbers = function(a, b) {
             />
           </div>
 
-          <div className="border-t border-[#2A302E] bg-[#1A1D1E] flex-shrink-0" style={{ height: '45%' }}>
+          {/* ✅ BOTTOM SECTION - Test Cases & Output */}
+          <div className="border-t border-[#2A302E] bg-[#1A1D1E] flex-shrink-0" style={{ height: isEditorMaximized ? '0px' : '45%' }}>
+            {/* Tabs */}
             <div className="flex border-b border-[#2A302E] bg-[#0D0F0F]">
-              <button onClick={() => setActiveTab('description')} className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 ${activeTab === 'description' ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'}`}>Test Cases</button>
-              <button onClick={() => setActiveTab('submissions')} className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 ${activeTab === 'submissions' ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'}`}>Submissions ({submissions.length})</button>
-              {result && <button className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 border-[#10B981] text-[#10B981]`}>Results</button>}
+              <button
+                onClick={() => setActiveTab('description')}
+                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 ${
+                  activeTab === 'description' ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'
+                }`}
+              >
+                Test Cases
+              </button>
+              <button
+                onClick={() => setActiveTab('submissions')}
+                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 ${
+                  activeTab === 'submissions' ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'
+                }`}
+              >
+                Submissions ({submissions.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 ${
+                  activeTab === 'history' ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-[#5C6360] hover:text-[#EDEFEE]'
+                }`}
+              >
+                Code History
+              </button>
+              {result && (
+                <button className={`px-4 py-1.5 text-xs font-medium transition-colors border-b-2 border-[#10B981] text-[#10B981]`}>
+                  Results
+                </button>
+              )}
             </div>
 
+            {/* Tab Content */}
             <div className="h-[calc(100%-32px)] overflow-y-auto p-4">
               {activeTab === 'description' ? (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-[#5C6360]">Test Cases</span>
-                    {result && <span className="text-xs text-[#5C6360]">{getPassedVisibleCount()} / {getTotalVisibleCount()} visible tests passed</span>}
-                  </div>
-                  {visibleTestCases.length === 0 ? (
-                    <p className="text-sm text-[#5C6360]">No test cases available</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {visibleTestCases.map((testCase: any, index: number) => {
-                        const testResult = getTestCaseResult(index);
-                        const passed = testResult?.passed;
-                        const hasResult = testResult !== null;
-                        
-                        return (
-                          <div key={index} className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedTestCase === index ? 'bg-[#10B981]/10 border border-[#10B981]/30' : 'hover:bg-[#1E2322]'} ${hasResult ? (passed ? 'border-l-4 border-l-[#10B981]' : 'border-l-4 border-l-[#F87171]') : ''}`} onClick={() => setSelectedTestCase(index)}>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-[#9CA3A0]">Case {index + 1}</span>
-                              {hasResult ? (passed ? <CheckCircle className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#F87171]" />) : <span className="text-xs text-[#5C6360]">⏳</span>}
-                            </div>
-                            <div className="text-xs text-[#5C6360] mt-1 truncate">Input: {testCase.input.substring(0, 50)}...</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                // ✅ Test Case Console
+                <TestCaseConsole
+                  visibleTestCases={visibleTestCases}
+                  result={result}
+                  selectedTestCase={selectedTestCase}
+                  setSelectedTestCase={setSelectedTestCase}
+                  getPassedVisibleCount={getPassedVisibleCount}
+                  getTotalVisibleCount={getTotalVisibleCount}
+                  getTestCaseResult={getTestCaseResult}
+                />
               ) : activeTab === 'submissions' ? (
-                <div>
-                  {submissions.length === 0 ? (
-                    <p className="text-sm text-[#5C6360] italic">No submissions yet.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {submissions.slice(0, 10).map((sub, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-[#1A1D1E] border border-[#2A302E] rounded-lg">
-                          <div className="flex items-center gap-3">
-                            {getStatusIcon(sub.status)}
-                            <span className={`text-sm font-medium ${getStatusColor(sub.status)}`}>{sub.status === 'accepted' ? 'Accepted' : sub.status.replace('_', ' ').toUpperCase()}</span>
-                          </div>
-                          <div className="flex items-center gap-4 text-xs text-[#5C6360]">
-                            <span>Runtime: {sub.runtime || 0}ms</span>
-                            <span>Memory: {sub.memory || 0}MB</span>
-                            <span>{new Date(sub.createdAt || sub.submittedAt).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : null}
+                // ✅ Submission History
+                <SubmissionHistory submissions={submissions} getStatusIcon={getStatusIcon} getStatusColor={getStatusColor} />
+              ) : (
+                // ✅ Code History
+                <CodeHistory codeHistory={codeHistory} onRestoreCode={setCode} />
+              )}
             </div>
           </div>
+
+          {/* ✅ Status Bar */}
+          <StatusBar result={result} problem={problem} />
         </div>
       </div>
     </div>

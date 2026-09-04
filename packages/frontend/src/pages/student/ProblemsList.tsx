@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, CheckCircle, Clock, AlertCircle, Code2, TrendingUp, Filter } from 'lucide-react';
+import { Search, CheckCircle, Clock, AlertCircle, Code2, TrendingUp, Filter, ThumbsUp } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Problem {
   _id: string;
@@ -14,9 +15,18 @@ interface Problem {
   totalSubmissions?: number;
   createdAt: string;
   isPublished: boolean;
+  isSolved?: boolean;
+}
+
+interface RecommendedProblem {
+  _id: string;
+  title: string;
+  slug: string;
+  difficulty: 'easy' | 'medium' | 'hard';
 }
 
 export const ProblemsList: React.FC = () => {
+  const { user } = useAuthStore();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -25,10 +35,36 @@ export const ProblemsList: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalProblems, setTotalProblems] = useState(0);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'acceptance'>('newest');
+  const [recommendedProblems, setRecommendedProblems] = useState<RecommendedProblem[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProblems();
+    fetchSubmissions();
   }, [currentPage, difficultyFilter, sortBy]);
+
+  useEffect(() => {
+    if (problems.length > 0 && submissions.length > 0) {
+      // Mark problems as solved if user has an accepted submission
+      const solvedIds = submissions
+        .filter(s => s.status === 'accepted')
+        .map(s => s.problemId?._id || s.problemId);
+      
+      setProblems(prev => 
+        prev.map(p => ({
+          ...p,
+          isSolved: solvedIds.includes(p._id),
+        }))
+      );
+      
+      // Generate recommended problems (problems not solved yet)
+      const unsolved = problems.filter(p => !solvedIds.includes(p._id));
+      const recommended = unsolved
+        .sort((a, b) => (a.acceptanceRate || 0) - (b.acceptanceRate || 0))
+        .slice(0, 5);
+      setRecommendedProblems(recommended);
+    }
+  }, [problems, submissions]);
 
   const fetchProblems = async () => {
     setLoading(true);
@@ -50,6 +86,7 @@ export const ProblemsList: React.FC = () => {
         totalSubmissions: p.totalSubmissions || Math.floor(Math.random() * 500) + 100,
         createdAt: p.createdAt || new Date().toISOString(),
         isPublished: p.isPublished !== false,
+        isSolved: false,
       }));
       
       setProblems(formattedProblems);
@@ -62,31 +99,43 @@ export const ProblemsList: React.FC = () => {
     }
   };
 
+  const fetchSubmissions = async () => {
+    try {
+      const response = await api.get('/problems/submissions');
+      setSubmissions(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+    }
+  };
+
   const getDifficultyBadge = (difficulty: string) => {
-    const colors: Record<string, string> = {
-      easy: 'bg-[#10B981]/20 text-[#10B981] border-[#10B981]/20',
-      medium: 'bg-[#FBBF24]/20 text-[#FBBF24] border-[#FBBF24]/20',
-      hard: 'bg-[#F87171]/20 text-[#F87171] border-[#F87171]/20',
+    const colors: Record<string, { bg: string; text: string; icon: JSX.Element }> = {
+      easy: { 
+        bg: 'bg-[#10B981]/20', 
+        text: 'text-[#10B981]',
+        icon: <CheckCircle className="w-4 h-4 text-[#10B981]" />
+      },
+      medium: { 
+        bg: 'bg-[#FBBF24]/20', 
+        text: 'text-[#FBBF24]',
+        icon: <Clock className="w-4 h-4 text-[#FBBF24]" />
+      },
+      hard: { 
+        bg: 'bg-[#F87171]/20', 
+        text: 'text-[#F87171]',
+        icon: <AlertCircle className="w-4 h-4 text-[#F87171]" />
+      },
     };
-    return colors[difficulty] || 'bg-[#2A302E] text-[#9CA3A0]';
+    return colors[difficulty] || colors.easy;
   };
 
-  const getDifficultyIcon = (difficulty: string) => {
-    const icons: Record<string, JSX.Element> = {
-      easy: <CheckCircle className="w-4 h-4 text-[#10B981]" />,
-      medium: <Clock className="w-4 h-4 text-[#FBBF24]" />,
-      hard: <AlertCircle className="w-4 h-4 text-[#F87171]" />,
+  const getDifficultyLabel = (difficulty: string) => {
+    const labels: Record<string, string> = {
+      easy: '🟢 Easy',
+      medium: '🟡 Medium',
+      hard: '🔴 Hard',
     };
-    return icons[difficulty] || <CheckCircle className="w-4 h-4 text-[#5C6360]" />;
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    const colors: Record<string, string> = {
-      easy: 'text-[#10B981]',
-      medium: 'text-[#FBBF24]',
-      hard: 'text-[#F87171]',
-    };
-    return colors[difficulty] || 'text-[#5C6360]';
+    return labels[difficulty] || difficulty;
   };
 
   if (loading) {
@@ -199,61 +248,68 @@ export const ProblemsList: React.FC = () => {
                       Tags
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-[#5C6360] uppercase tracking-wider">
-                      Action
+                      Status
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {problems.map((problem) => (
-                    <tr key={problem._id} className="border-b border-[#2A302E] hover:bg-[#1E2322] transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          {getDifficultyIcon(problem.difficulty)}
+                  {problems.map((problem) => {
+                    const difficulty = getDifficultyBadge(problem.difficulty);
+                    const isSolved = problem.isSolved;
+
+                    return (
+                      <tr key={problem._id} className="border-b border-[#2A302E] hover:bg-[#1E2322] transition-colors">
+                        <td className="py-3 px-4">
                           <Link 
                             to={`/problems/${problem.slug}`}
-                            className="text-[#EDEFEE] hover:text-[#10B981] transition-colors font-medium"
+                            className="text-[#EDEFEE] hover:text-[#10B981] transition-colors font-medium flex items-center gap-2"
                           >
+                            {isSolved && (
+                              <span className="text-[#10B981]" title="Solved">✅</span>
+                            )}
                             {problem.title}
                           </Link>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${getDifficultyBadge(problem.difficulty)}`}>
-                          {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-[#0D0F0F] rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-[#10B981] rounded-full"
-                              style={{ width: `${problem.acceptanceRate || 0}%` }}
-                            />
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${difficulty.bg} ${difficulty.text}`}>
+                            {getDifficultyLabel(problem.difficulty)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-[#0D0F0F] rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-[#10B981] rounded-full"
+                                style={{ width: `${problem.acceptanceRate || 0}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-[#9CA3A0]">{problem.acceptanceRate || 0}%</span>
                           </div>
-                          <span className="text-xs text-[#9CA3A0]">{problem.acceptanceRate || 0}%</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap gap-1">
-                          {problem.tags?.slice(0, 3).map((tag, index) => (
-                            <span key={index} className="text-xs px-2 py-0.5 rounded bg-[#2A302E] text-[#5C6360]">
-                              {tag}
-                            </span>
-                          ))}
-                          {problem.tags?.length > 3 && (
-                            <span className="text-xs px-2 py-0.5 rounded bg-[#2A302E] text-[#5C6360]">
-                              +{problem.tags.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <Link to={`/problems/${problem.slug}`}>
-                          <Button variant="primary" size="sm">Solve</Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-wrap gap-1">
+                            {problem.tags?.slice(0, 3).map((tag, index) => (
+                              <span key={index} className="text-xs px-2 py-0.5 rounded bg-[#2A302E] text-[#5C6360]">
+                                {tag}
+                              </span>
+                            ))}
+                            {problem.tags?.length > 3 && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-[#2A302E] text-[#5C6360]">
+                                +{problem.tags.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Link to={`/problems/${problem.slug}`}>
+                            <Button variant={isSolved ? 'secondary' : 'primary'} size="sm">
+                              {isSolved ? 'Review' : 'Solve'}
+                            </Button>
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -280,6 +336,39 @@ export const ProblemsList: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ✅ Recommended Problems */}
+        {recommendedProblems.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold text-[#EDEFEE] mb-4 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-[#10B981]" />
+              Recommended Next Problems
+            </h2>
+            <div className="space-y-2">
+              {recommendedProblems.map((p) => (
+                <Link
+                  key={p._id}
+                  to={`/problems/${p.slug}`}
+                  className="block p-3 bg-[#1A1D1E] border border-[#2A302E] rounded-lg hover:border-[#10B981] transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-medium ${
+                        p.difficulty === 'easy' ? 'text-[#10B981]' :
+                        p.difficulty === 'medium' ? 'text-[#FBBF24]' :
+                        'text-[#F87171]'
+                      }`}>
+                        {p.difficulty.charAt(0).toUpperCase() + p.difficulty.slice(1)}
+                      </span>
+                      <span className="text-sm text-[#EDEFEE]">{p.title}</span>
+                    </div>
+                    <span className="text-xs text-[#5C6360]">→</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </div>
