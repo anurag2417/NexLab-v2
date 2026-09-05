@@ -1,0 +1,7 @@
+# packages/frontend/public/robots.txt
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://nexlab-v2.vercel.app/sitemap.xml
