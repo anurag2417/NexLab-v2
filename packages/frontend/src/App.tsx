@@ -30,7 +30,7 @@ import { AdminUsers } from './pages/admin/AdminUsers';
 import { AdminAnalytics } from './pages/admin/AdminAnalytics';
 import { AdminProblems } from './pages/admin/AdminProblems';
 import { ProblemForm } from './pages/admin/ProblemForm';
-import { AdminBulkImport } from './pages/admin/AdminBulkImport'; // ✅ ADD THIS
+import { AdminBulkImport } from './pages/admin/AdminBulkImport';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ 
@@ -63,12 +63,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
+        {/* Public Routes - Landing page has its own animations */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Protected Student Routes */}
+        {/* Protected Student Routes - No animations */}
         <Route element={<ProtectedRoute><RootLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<StudentDashboard />} />
           <Route path="/courses" element={<StudentCourses />} />
@@ -80,7 +80,7 @@ function App() {
           <Route path="/course/:courseId" element={<CoursePlayer />} />
         </Route>
 
-        {/* Protected Admin Routes */}
+        {/* Protected Admin Routes - No animations */}
         <Route element={<ProtectedRoute adminOnly><RootLayout /></ProtectedRoute>}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/courses" element={<AdminCourses />} />
@@ -89,7 +89,7 @@ function App() {
           <Route path="/admin/problems" element={<AdminProblems />} />
           <Route path="/admin/problems/create" element={<ProblemForm />} />
           <Route path="/admin/problems/edit/:problemId" element={<ProblemForm />} />
-          <Route path="/admin/problems/import" element={<AdminBulkImport />} /> {/* ✅ ADD THIS */}
+          <Route path="/admin/problems/import" element={<AdminBulkImport />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
         </Route>
