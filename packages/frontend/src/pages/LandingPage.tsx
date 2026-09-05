@@ -24,6 +24,7 @@ export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [pageLoaded, setPageLoaded] = useState(false);
   const [stats, setStats] = useState({
     students: 0,
     courses: 0,
@@ -53,6 +54,15 @@ export const LandingPage: React.FC = () => {
   // Stats animation flag
   const [statsAnimated, setStatsAnimated] = useState(false);
 
+  // ✅ Mark page as loaded after mount
+  useEffect(() => {
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      setPageLoaded(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Parallax effect on mouse move
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -64,47 +74,61 @@ export const LandingPage: React.FC = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Handle scroll events for visibility and animations
+  // ✅ Handle scroll events with throttling for performance
   useEffect(() => {
+    let ticking = false;
+
     const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollY = window.scrollY;
+          const windowHeight = window.innerHeight;
 
-      // Show/hide scroll to top button
-      setShowScrollTop(scrollY > 500);
+          // Show/hide scroll to top button
+          setShowScrollTop(scrollY > 500);
 
-      // Check visibility for each section using getBoundingClientRect
-      const checkVisibility = (ref: React.RefObject<HTMLElement>, key: keyof typeof isVisible) => {
-        if (ref.current) {
-          const rect = ref.current.getBoundingClientRect();
-          const isElementVisible = rect.top < windowHeight * 0.85;
-          if (isElementVisible && !isVisible[key]) {
-            setIsVisible(prev => ({ ...prev, [key]: true }));
+          // Check visibility for each section
+          const checkVisibility = (ref: React.RefObject<HTMLElement>, key: keyof typeof isVisible) => {
+            if (ref.current) {
+              const rect = ref.current.getBoundingClientRect();
+              const isElementVisible = rect.top < windowHeight * 0.85;
+              if (isElementVisible && !isVisible[key]) {
+                setIsVisible(prev => ({ ...prev, [key]: true }));
+              }
+            }
+          };
+
+          checkVisibility(heroRef, 'hero');
+          checkVisibility(featuresRef, 'features');
+          checkVisibility(testimonialsRef, 'testimonials');
+          checkVisibility(ctaRef, 'cta');
+
+          // Check stats visibility and trigger animation
+          if (statsRef.current) {
+            const rect = statsRef.current.getBoundingClientRect();
+            if (rect.top < windowHeight * 0.85 && !statsAnimated) {
+              setIsVisible(prev => ({ ...prev, stats: true }));
+              animateStats();
+              setStatsAnimated(true);
+            }
           }
-        }
-      };
 
-      checkVisibility(heroRef, 'hero');
-      checkVisibility(featuresRef, 'features');
-      checkVisibility(testimonialsRef, 'testimonials');
-      checkVisibility(ctaRef, 'cta');
-
-      // Check stats visibility and trigger animation
-      if (statsRef.current) {
-        const rect = statsRef.current.getBoundingClientRect();
-        if (rect.top < windowHeight * 0.85 && !statsAnimated) {
-          setIsVisible(prev => ({ ...prev, stats: true }));
-          animateStats();
-          setStatsAnimated(true);
-        }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
     // Initial check after mount
-    setTimeout(handleScroll, 200);
+    const initialCheck = setTimeout(() => {
+      handleScroll();
+    }, 300);
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(initialCheck);
+    };
   }, [isVisible, statsAnimated]);
 
   const animateStats = useCallback(() => {
@@ -124,7 +148,7 @@ export const LandingPage: React.FC = () => {
     const timer = setInterval(() => {
       currentStep++;
       const progress = currentStep / steps;
-      const eased = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       
       setStats({
         students: Math.round(targetStats.students * eased),
@@ -152,7 +176,8 @@ export const LandingPage: React.FC = () => {
     setIsMobileMenuOpen(false);
   }, []);
 
-  // Dummy Data
+  // ... (testimonials, features, faqs, languages, categories, partners data remain the same)
+
   const testimonials = [
     {
       name: 'Priya Sharma',
@@ -314,15 +339,15 @@ export const LandingPage: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="min-h-screen bg-[#0D0F0F] overflow-x-hidden">
-      {/* Navigation - Bigger Text */}
+    <div className={`min-h-screen bg-[#0D0F0F] overflow-x-hidden transition-opacity duration-500 ${
+      pageLoaded ? 'opacity-100' : 'opacity-0'
+    }`}>
+      {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D0F0F]/80 backdrop-blur-xl border-b border-[#2A302E] transition-all duration-300">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            {/* Logo */}
             <BrandLogo size="md" showText={true} />
 
-            {/* Desktop Navigation - Bigger text */}
             <div className="hidden md:flex items-center gap-10">
               <button 
                 onClick={() => scrollToSection('features')} 
@@ -354,7 +379,6 @@ export const LandingPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Desktop Auth Buttons */}
             <div className="hidden md:flex items-center gap-4">
               {user ? (
                 <Button variant="primary" onClick={() => navigate('/dashboard')} className="gap-2 group text-base px-6 py-3">
@@ -374,7 +398,6 @@ export const LandingPage: React.FC = () => {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 text-[#EDEFEE] hover:bg-[#1E2322] rounded-lg transition-colors"
@@ -383,7 +406,6 @@ export const LandingPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Mobile Menu */}
           {isMobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-[#2A302E] animate-in slide-in-from-top duration-200">
               <div className="flex flex-col gap-3">
@@ -441,11 +463,10 @@ export const LandingPage: React.FC = () => {
         {/* Animated Background */}
         <div className="absolute inset-0 w-full h-full">
           <div className="absolute inset-0 bg-gradient-to-br from-[#10B981]/5 via-transparent to-[#059669]/5" />
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#10B981]/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#60A5FA]/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#10B981]/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '0.5s' }} />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#10B981]/10 rounded-full blur-3xl animate-pulse-slow" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#60A5FA]/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#10B981]/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '0.5s' }} />
           
-          {/* Floating particles */}
           <div className="absolute inset-0 overflow-hidden">
             {[...Array(20)].map((_, i) => (
               <div
@@ -465,7 +486,6 @@ export const LandingPage: React.FC = () => {
         </div>
 
         <div className="max-w-7xl mx-auto text-center relative z-10 w-full">
-          {/* Animated Badge */}
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#10B981]/10 border border-[#10B981]/20 mb-6 transition-all duration-700 ${
             isVisible.hero ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
           }`}>
@@ -473,7 +493,6 @@ export const LandingPage: React.FC = () => {
             <span className="text-xs font-medium text-[#10B981]">🇮🇳 India's #1 Coding Platform • 15,000+ Students</span>
           </div>
 
-          {/* Main Heading with Parallax */}
           <div 
             className={`transition-all duration-1000 ${
               isVisible.hero ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
@@ -491,7 +510,6 @@ export const LandingPage: React.FC = () => {
             </h1>
           </div>
 
-          {/* Subtitle */}
           <p className={`text-lg sm:text-xl md:text-2xl text-[#9CA3A0] max-w-3xl mx-auto mb-8 leading-relaxed transition-all duration-700 delay-300 ${
             isVisible.hero ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}>
@@ -499,7 +517,6 @@ export const LandingPage: React.FC = () => {
             Join 15,000+ students and start your learning journey today.
           </p>
 
-          {/* CTA Buttons */}
           <div className={`flex flex-col sm:flex-row gap-4 justify-center transition-all duration-700 delay-500 ${
             isVisible.hero ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}>
@@ -521,7 +538,6 @@ export const LandingPage: React.FC = () => {
             )}
           </div>
 
-          {/* Trust Badges */}
           <div className={`flex flex-wrap items-center justify-center gap-6 mt-8 text-sm text-[#5C6360] transition-all duration-700 delay-700 ${
             isVisible.hero ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}>
@@ -575,7 +591,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Course Categories - Fixed padding */}
+      {/* Course Categories */}
       <section className="w-full py-8 px-4 sm:px-6 lg:px-8 border-b border-[#2A302E]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-6">
@@ -697,7 +713,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Partners Section - Fixed padding and spacing */}
+      {/* Partners Section */}
       <section className="w-full py-10 px-4 sm:px-6 lg:px-8 bg-[#161A19] border-y border-[#2A302E]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-6">
@@ -772,7 +788,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* FAQ Section - Fixed padding */}
+      {/* FAQ Section */}
       <section id="faq" className="w-full py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
@@ -809,8 +825,8 @@ export const LandingPage: React.FC = () => {
       {/* CTA Section */}
       <section id="cta" ref={ctaRef} className="w-full py-20 px-4 sm:px-6 lg:px-8 border-t border-[#2A302E] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-[#10B981]/10 via-[#059669]/5 to-transparent" />
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#10B981]/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#60A5FA]/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#10B981]/10 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#60A5FA]/5 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1s' }} />
         
         <div className={`max-w-4xl mx-auto text-center relative z-10 transition-all duration-700 ${
           isVisible.cta ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
@@ -844,7 +860,6 @@ export const LandingPage: React.FC = () => {
       <footer className="bg-[#161A19] border-t border-[#2A302E] pt-12 pb-6 px-4 sm:px-6 lg:px-8 w-full">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-            {/* Brand */}
             <div className="col-span-2 md:col-span-1">
               <BrandLogo size="lg" showText={true} />
               <p className="text-sm text-[#9CA3A0] mt-4 mb-4 leading-relaxed">
@@ -869,7 +884,6 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Links */}
             <div>
               <h4 className="font-semibold text-[#EDEFEE] mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm">
@@ -908,7 +922,6 @@ export const LandingPage: React.FC = () => {
               </ul>
             </div>
 
-            {/* Resources */}
             <div>
               <h4 className="font-semibold text-[#EDEFEE] mb-4">Resources</h4>
               <ul className="space-y-2 text-sm">
@@ -919,7 +932,6 @@ export const LandingPage: React.FC = () => {
               </ul>
             </div>
 
-            {/* Contact */}
             <div>
               <h4 className="font-semibold text-[#EDEFEE] mb-4">Contact Us</h4>
               <ul className="space-y-3 text-sm">
@@ -943,7 +955,6 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bottom */}
           <div className="pt-8 border-t border-[#2A302E] flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-[#5C6360]">
             <p>© {currentYear} NexLab. All rights reserved. 🇮🇳 Made in India</p>
             <div className="flex items-center gap-6">

@@ -1,5 +1,7 @@
+// packages/frontend/src/pages/student/Sandbox.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Loader2, Terminal, ChevronDown, X, Copy, Check, Maximize2, Minimize2, GripVertical } from 'lucide-react';
+import { Play, Loader2, Terminal, ChevronDown, X, Copy, Check, Maximize2, Minimize2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { setupMonaco } from '../../lib/monaco-config';
@@ -39,73 +41,51 @@ export const Sandbox: React.FC = () => {
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editorError, setEditorError] = useState(false);
-  
-  // NEW: Split view state
-  const [splitPosition, setSplitPosition] = useState(60); // Editor takes 60% width
-  const [isDragging, setIsDragging] = useState(false);
-  const [isEditorMaximized, setIsEditorMaximized] = useState(false);
   const [isOutputMaximized, setIsOutputMaximized] = useState(false);
+  // Editor width is controlled as a percentage of the sandbox width.
+  // This keeps the editor and output side by side with a draggable divider.
+  const [editorWidth, setEditorWidth] = useState(60);
+  const [isDragging, setIsDragging] = useState(false);
   
   const outputRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchLanguages();
   }, []);
 
-  // ✅ Drag functionality for resizing panels horizontally
+  // Drag functionality for the vertical divider.
   useEffect(() => {
+    if (!isDragging) return;
+
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !containerRef.current) return;
-      
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const containerWidth = containerRect.width;
-      const mouseX = e.clientX - containerRect.left;
-      
-      // Calculate percentage (10% to 85% range)
-      let percentage = (mouseX / containerWidth) * 100;
-      percentage = Math.max(15, Math.min(85, percentage));
-      
-      setSplitPosition(percentage);
+      if (!containerRef.current) return;
+
+      const rect = containerRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const percentage = (mouseX / rect.width) * 100;
+
+      // Keep both panels usable.
+      if (percentage > 20 && percentage < 80) {
+        setEditorWidth(percentage);
+      }
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'none';
     };
 
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDragging || !containerRef.current) return;
-      
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const containerWidth = containerRect.width;
-      const touchX = e.touches[0].clientX - containerRect.left;
-      
-      let percentage = (touchX / containerWidth) * 100;
-      percentage = Math.max(15, Math.min(85, percentage));
-      
-      setSplitPosition(percentage);
-    };
-
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove);
-      document.addEventListener('touchend', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    }
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleMouseUp);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
   }, [isDragging]);
 
@@ -198,20 +178,8 @@ export const Sandbox: React.FC = () => {
     console.warn('Monaco Editor failed to load, using fallback editor');
   };
 
-  const toggleEditorMaximize = () => {
-    setIsEditorMaximized(!isEditorMaximized);
-    setIsOutputMaximized(false);
-  };
-
   const toggleOutputMaximize = () => {
-    setIsOutputMaximized(!isOutputMaximized);
-    setIsEditorMaximized(false);
-  };
-
-  const resetLayout = () => {
-    setIsEditorMaximized(false);
-    setIsOutputMaximized(false);
-    setSplitPosition(60);
+    setIsOutputMaximized((current) => !current);
   };
 
   const getLanguageColor = (languageId: string) => {
@@ -234,10 +202,6 @@ export const Sandbox: React.FC = () => {
 
   const currentLanguage = languages.find(l => l.id === selectedLanguage);
 
-  // Calculate panel widths
-  const editorWidth = isEditorMaximized ? 100 : isOutputMaximized ? 0 : splitPosition;
-  const outputWidth = isOutputMaximized ? 100 : isEditorMaximized ? 0 : 100 - splitPosition;
-
   return (
     <div className="h-full w-full bg-[#0D0F0F] overflow-hidden">
       <div className="h-full w-full flex flex-col px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-[1600px] mx-auto">
@@ -250,7 +214,7 @@ export const Sandbox: React.FC = () => {
             </h1>
             <p className="text-[#9CA3A0] mt-1">Write, test, and run code in multiple languages</p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
@@ -297,159 +261,127 @@ export const Sandbox: React.FC = () => {
                 </>
               )}
             </Button>
-
-            <div className="flex items-center gap-1">
-              <button
-                onClick={toggleEditorMaximize}
-                className={`p-2 rounded-lg transition-colors ${
-                  isEditorMaximized ? 'bg-[#10B981]/20 text-[#10B981]' : 'text-[#5C6360] hover:text-[#EDEFEE] hover:bg-[#1E2322]'
-                }`}
-                title="Maximize Editor"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={toggleOutputMaximize}
-                className={`p-2 rounded-lg transition-colors ${
-                  isOutputMaximized ? 'bg-[#10B981]/20 text-[#10B981]' : 'text-[#5C6360] hover:text-[#EDEFEE] hover:bg-[#1E2322]'
-                }`}
-                title="Maximize Output"
-              >
-                <Minimize2 className="w-4 h-4" />
-              </button>
-              {(isEditorMaximized || isOutputMaximized) && (
-                <button
-                  onClick={resetLayout}
-                  className="p-2 text-[#5C6360] hover:text-[#EDEFEE] hover:bg-[#1E2322] rounded-lg transition-colors"
-                  title="Reset Layout"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
           </div>
         </div>
 
-        {/* Main Content - Side by Side Layout */}
-        <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 flex min-h-0 gap-0 relative">
-            {/* Left Panel - Code Editor */}
-            <div
-              className="flex flex-col bg-[#161A19] border border-[#2A302E] rounded-l-xl overflow-hidden shadow-sm"
-              style={{ 
-                width: `${editorWidth}%`,
-                display: editorWidth === 0 ? 'none' : 'flex',
-                borderTopRightRadius: editorWidth === 0 || outputWidth === 0 ? '0.75rem' : '0',
-                borderBottomRightRadius: editorWidth === 0 || outputWidth === 0 ? '0.75rem' : '0',
-              }}
-            >
-              {/* Editor Toolbar */}
-              <div className="px-4 py-2 border-b border-[#2A302E] flex items-center justify-between bg-[#1A1D1E] flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${getLanguageColor(selectedLanguage)}`} />
-                  <span className="text-sm font-medium text-[#EDEFEE]">
-                    {currentLanguage?.name || 'Code Editor'}
-                  </span>
-                  <span className="text-xs text-[#5C6360]">.{(currentLanguage?.extension || 'txt')}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-[#5C6360]">
-                  <span>⌘ + Enter to run</span>
-                </div>
-              </div>
+        {/* Main Content */}
+        <div ref={containerRef} className="flex-1 flex flex-col min-h-0 gap-0">
+          {/* Sandbox Container */}
+          <div className="flex-1 min-h-[500px] lg:min-h-[700px] min-w-0 flex flex-row bg-[#161A19] border border-[#2A302E] rounded-xl overflow-hidden shadow-sm">
 
-              {/* Monaco Editor */}
-              <div className="flex-1 min-h-0">
-                {!editorError ? (
-                  <React.Suspense 
-                    fallback={
-                      <div className="flex items-center justify-center h-full bg-[#1E1E1E]">
-                        <div className="animate-spin rounded-full h-8 w-8 border-4 border-[#10B981] border-t-transparent" />
-                      </div>
-                    }
-                  >
-                    <MonacoEditor
-                      language={selectedLanguage}
-                      value={code}
-                      onChange={(value) => setCode(value || '')}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        lineNumbers: 'on',
-                        automaticLayout: true,
-                        tabSize: 2,
-                        scrollBeyondLastLine: false,
-                        wordWrap: 'on',
-                        suggestOnTriggerCharacters: true,
-                        quickSuggestions: true,
-                      }}
-                    />
-                  </React.Suspense>
-                ) : (
-                  <textarea
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    className="w-full h-full bg-[#1E1E1E] text-[#D4D4D4] font-mono text-sm p-4 resize-none focus:outline-none border-0"
-                    placeholder="// Write your code here"
-                    spellCheck={false}
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* ✅ Drag Handle - Vertical Divider */}
-            {!isEditorMaximized && !isOutputMaximized && (
+            {/* Editor Section */}
+            {!isOutputMaximized && (
               <div
-                ref={dragRef}
-                className="flex-shrink-0 w-1 bg-[#2A302E] hover:bg-[#10B981] cursor-col-resize transition-colors duration-150 relative group z-10"
-                onMouseDown={() => setIsDragging(true)}
-                onTouchStart={() => setIsDragging(true)}
+                className="flex flex-col min-h-0 min-w-0 overflow-hidden"
+                style={{ width: `${editorWidth}%` }}
               >
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-0.5 h-12 bg-[#5C6360] group-hover:bg-[#10B981] rounded-full transition-colors" />
+                {/* Editor Toolbar */}
+                <div className="px-4 py-2 border-b border-[#2A302E] flex items-center justify-between bg-[#1A1D1E] flex-shrink-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getLanguageColor(selectedLanguage)}`} />
+                    <span className="text-sm font-medium text-[#EDEFEE] truncate">
+                      {currentLanguage?.name || 'Code Editor'}
+                    </span>
+                    <span className="text-xs text-[#5C6360] flex-shrink-0">
+                      .{currentLanguage?.extension || 'txt'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-[#5C6360] flex-shrink-0">
+                    <span>⌘ + Enter to run</span>
+                  </div>
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <GripVertical className="w-4 h-4 text-[#10B981]" />
+
+                {/* Monaco Editor */}
+                <div className="flex-1 min-h-0 min-w-0 bg-[#1E1E1E]">
+                  {!editorError ? (
+                    <React.Suspense
+                      fallback={
+                        <div className="flex items-center justify-center h-full bg-[#1E1E1E]">
+                          <div className="animate-spin rounded-full h-8 w-8 border-4 border-[#10B981] border-t-transparent" />
+                        </div>
+                      }
+                    >
+                      <MonacoEditor
+                        height="100%"
+                        width="100%"
+                        language={selectedLanguage}
+                        value={code}
+                        onChange={(value) => setCode(value || '')}
+                        theme="vs-dark"
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          lineNumbers: 'on',
+                          automaticLayout: true,
+                          tabSize: 2,
+                          scrollBeyondLastLine: false,
+                          wordWrap: 'on',
+                          suggestOnTriggerCharacters: true,
+                          quickSuggestions: true,
+                          padding: { top: 12, bottom: 12 },
+                        }}
+                      />
+                    </React.Suspense>
+                  ) : (
+                    <textarea
+                      value={code}
+                      onChange={(e) => setCode(e.target.value)}
+                      className="w-full h-full bg-[#1E1E1E] text-[#D4D4D4] font-mono text-sm p-4 resize-none focus:outline-none border-0"
+                      placeholder="// Write your code here"
+                      spellCheck={false}
+                    />
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Right Panel - Output */}
+            {/* Vertical Resize Divider */}
+            {!isOutputMaximized && (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize editor and output panels"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                className="group relative flex-shrink-0 w-1.5 bg-[#2A302E] hover:bg-[#10B981] cursor-col-resize transition-colors flex items-center justify-center"
+              >
+                <div className="h-12 w-1 bg-[#5C6360] group-hover:bg-[#10B981] rounded-full transition-colors" />
+              </div>
+            )}
+
+            {/* Output Section */}
             <div
-              className="flex flex-col bg-[#161A19] border border-[#2A302E] rounded-r-xl overflow-hidden shadow-sm"
-              style={{ 
-                width: `${outputWidth}%`,
-                display: outputWidth === 0 ? 'none' : 'flex',
-                borderTopLeftRadius: outputWidth === 0 || editorWidth === 0 ? '0.75rem' : '0',
-                borderBottomLeftRadius: outputWidth === 0 || editorWidth === 0 ? '0.75rem' : '0',
-              }}
+              className={`flex flex-col min-h-0 min-w-0 bg-[#1A1D1E] ${
+                isOutputMaximized ? 'w-full' : 'flex-1'
+              }`}
             >
               {/* Output Header */}
-              <div className="px-4 py-2 border-b border-[#2A302E] flex items-center justify-between bg-[#1A1D1E] flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-[#9CA3A0]" />
+              <div className="px-4 py-2 border-b border-[#2A302E] flex items-center justify-between bg-[#0D0F0F] flex-shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Terminal className="w-4 h-4 text-[#9CA3A0] flex-shrink-0" />
                   <span className="text-sm font-medium text-[#EDEFEE]">Output</span>
                   {result && (
                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                      result.success 
-                        ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20' 
+                      result.success
+                        ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20'
                         : 'bg-[#F87171]/10 text-[#F87171] border border-[#F87171]/20'
                     }`}>
                       {result.success ? 'Success' : 'Error'}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* Stdin Input */}
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      value={stdin}
-                      onChange={(e) => setStdin(e.target.value)}
-                      placeholder="stdin"
-                      className="w-24 px-2 py-1 text-xs bg-[#0D0F0F] border border-[#2A302E] rounded text-[#EDEFEE] placeholder-[#5C6360] focus:outline-none focus:ring-1 focus:ring-[#10B981]"
-                    />
-                  </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <input
+                    type="text"
+                    value={stdin}
+                    onChange={(e) => setStdin(e.target.value)}
+                    placeholder="stdin"
+                    className="w-24 px-2 py-1 text-xs bg-[#0D0F0F] border border-[#2A302E] rounded text-[#EDEFEE] placeholder-[#5C6360] focus:outline-none focus:ring-1 focus:ring-[#10B981]"
+                  />
+
                   {result && (
                     <>
                       <button
@@ -457,8 +389,13 @@ export const Sandbox: React.FC = () => {
                         className="p-1 text-[#9CA3A0] hover:text-[#EDEFEE] transition-colors"
                         title="Copy output"
                       >
-                        {copied ? <Check className="w-4 h-4 text-[#10B981]" /> : <Copy className="w-4 h-4" />}
+                        {copied ? (
+                          <Check className="w-4 h-4 text-[#10B981]" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
                       </button>
+
                       <button
                         onClick={handleClearOutput}
                         className="p-1 text-[#9CA3A0] hover:text-[#EDEFEE] transition-colors"
@@ -468,18 +405,32 @@ export const Sandbox: React.FC = () => {
                       </button>
                     </>
                   )}
+
+                  <button
+                    onClick={toggleOutputMaximize}
+                    className="p-1 text-[#9CA3A0] hover:text-[#EDEFEE] transition-colors"
+                    title={isOutputMaximized ? 'Show editor' : 'Maximize output'}
+                  >
+                    {isOutputMaximized ? (
+                      <Minimize2 className="w-4 h-4" />
+                    ) : (
+                      <Maximize2 className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
               {/* Output Content */}
-              <div ref={outputRef} className="flex-1 p-4 overflow-y-auto font-mono text-sm bg-[#0D0F0F] min-h-0">
+              <div
+                ref={outputRef}
+                className="flex-1 p-4 overflow-y-auto font-mono text-sm bg-[#0D0F0F] min-h-0"
+              >
                 {!result && (
                   <p className="text-[#5C6360] italic">Run your code to see output here...</p>
                 )}
 
                 {result && (
                   <div className="space-y-3">
-                    {/* STDOUT */}
                     {result.output && (
                       <div>
                         <div className="text-xs text-[#9CA3A0] mb-1">STDOUT:</div>
@@ -489,7 +440,6 @@ export const Sandbox: React.FC = () => {
                       </div>
                     )}
 
-                    {/* STDERR */}
                     {result.error && (
                       <div>
                         <div className="text-xs text-[#F87171] mb-1">STDERR:</div>
@@ -499,7 +449,6 @@ export const Sandbox: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Error Message */}
                     {!result.success && result.message && (
                       <div>
                         <div className="text-xs text-[#F87171] mb-1">Error:</div>
@@ -509,17 +458,22 @@ export const Sandbox: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Execution Info */}
                     {result.executed && result.success && (
                       <div className="pt-3 border-t border-[#2A302E] flex flex-wrap items-center gap-4 text-xs text-[#9CA3A0]">
                         {result.exitCode !== undefined && (
-                          <span>Exit Code: <span className="text-[#EDEFEE]">{result.exitCode}</span></span>
+                          <span>
+                            Exit Code: <span className="text-[#EDEFEE]">{result.exitCode}</span>
+                          </span>
                         )}
                         {result.executionTime && (
-                          <span>Time: <span className="text-[#EDEFEE]">{result.executionTime}</span></span>
+                          <span>
+                            Time: <span className="text-[#EDEFEE]">{result.executionTime}</span>
+                          </span>
                         )}
                         {result.language && (
-                          <span>Language: <span className="text-[#EDEFEE]">{result.language}</span></span>
+                          <span>
+                            Language: <span className="text-[#EDEFEE]">{result.language}</span>
+                          </span>
                         )}
                       </div>
                     )}
@@ -532,10 +486,12 @@ export const Sandbox: React.FC = () => {
           {/* Keyboard Shortcut Hint */}
           <div className="text-xs text-[#5C6360] text-center flex-shrink-0 mt-2">
             <kbd className="px-2.5 py-1 bg-[#161A19] border border-[#2A302E] rounded text-xs">⌘ + Enter</kbd>
-            {' '}to run code • <kbd className="px-2.5 py-1 bg-[#161A19] border border-[#2A302E] rounded text-xs">Drag</kbd> the divider to resize panels
+            {' '}to run code • Multiple languages supported • 5 executions per minute
           </div>
         </div>
       </div>
     </div>
   );
 };
+
+export default Sandbox;
